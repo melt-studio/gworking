@@ -23,7 +23,7 @@
     background:transparent; transition:transform 1.1s var(--ease); }
   .card:hover { transform:scale(1.135); }
   @keyframes cardIn { from { opacity:0; transform:translateY(16px) scale(.985); } to { opacity:1; transform:none; } }
-  .card.intro { animation: cardIn .7s var(--easein) both; }
+  .card.intro { animation: cardIn .7s var(--easein) backwards; }
   .card img, .card video { width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; background:transparent; }
 
   .hud { position:fixed; z-index:10; font-size:12px; letter-spacing:var(--tracking); line-height:1.4; color:var(--fg); }
