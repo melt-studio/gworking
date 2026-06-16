@@ -1,0 +1,13 @@
+{
+  "name": "gworking",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Greg Zadrozny portfolio \u2014 static site built from Airtable at deploy time.",
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "dependencies": {
+    "@ffprobe-installer/ffprobe": "^2.1.2"
+  }
+}
