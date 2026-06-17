@@ -22,14 +22,12 @@
   }
   .viewport { position:fixed; inset:0; overflow:hidden; cursor:grab; }
   .viewport.dragging { cursor:grabbing; }
-  .canvas { position:absolute; left:0; top:0; width:1px; height:1px; will-change:transform; }
+  .canvas { position:absolute; left:0; top:0; width:1px; height:1px; will-change:transform; transform-origin:0 0; opacity:0; }
 
   .card-wrap { position:absolute; transition:left .55s var(--ease), top .55s var(--ease); }
   .card { width:100%; height:100%; cursor:pointer; overflow:hidden; position:relative;
     background:transparent; transition:transform 1.1s var(--ease), width .55s var(--ease), height .55s var(--ease); }
   .card:hover { transform:scale(1.08); }
-  @keyframes cardIn { from { opacity:0; transform:translateY(16px) scale(.985); } to { opacity:1; transform:none; } }
-  .card.intro { animation: cardIn .7s var(--easein) backwards; }
   @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
   .card img, .card video { width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; background:transparent; }
 
@@ -53,14 +51,14 @@
   .overlay.active { opacity:1; pointer-events:auto; }
   .overlay.closing { transition:opacity .9s ease; }
   #about.closing { transition:opacity .3s ease; }
-  .ov-close { position:absolute; top:30px; right:36px; width:32px; height:32px; background:none; border:none; cursor:pointer; z-index:120; display:flex; align-items:center; justify-content:center; padding:0; }
-  .ov-close svg { width:26px; height:26px; stroke:var(--fg); stroke-width:1.8; fill:none; opacity:.85; transition:opacity .2s ease; }
-  .ov-close:hover svg { opacity:1; }
+  .ov-close { position:absolute; top:30px; right:36px; width:30px; height:30px; background:none; border:none; cursor:pointer; z-index:120; display:flex; align-items:center; justify-content:flex-end; padding:0; }
+  .ov-close svg { width:20px; height:20px; stroke:var(--fg); stroke-width:2; fill:none; opacity:.85; transition:opacity .2s ease, transform .2s var(--ease); }
+  .ov-close:hover svg { opacity:1; transform:scale(1.15); }
   .overlay.closing .ov-close svg { opacity:0; transition:opacity .12s ease; }
 
   /* ===== PROJECT — FILMSTRIP SLIDESHOW ===== */
   .show-strip { flex:1; display:flex; align-items:center; gap:6px; overflow-x:auto; overflow-y:hidden;
-    padding:96px 80px 40px 80px; min-height:0; scrollbar-width:none; }
+    padding:72px 80px 40px 56px; min-height:0; scrollbar-width:none; }
   .show-strip.single { justify-content:center; }
   .show-strip::-webkit-scrollbar { display:none; }
   .slide { flex:0 0 auto; height:100%; aspect-ratio:var(--aspect,1.5); background:transparent; position:relative; }
@@ -73,7 +71,7 @@
   .vtoggle svg { width:13px; height:13px; fill:#fff; }
 
   .show-caption { flex:0 0 auto; display:flex; justify-content:space-between; align-items:flex-end;
-    gap:48px; padding:0 36px 56px 80px; color:var(--fg); font-size:12px; letter-spacing:var(--tracking);
+    gap:48px; padding:0 36px 56px 56px; color:var(--fg); font-size:12px; letter-spacing:var(--tracking);
     opacity:0; transform:translateY(14px); transition:opacity .6s var(--easein) .4s, transform .6s var(--easein) .4s; }
   .overlay.active .show-caption { opacity:1; transform:none; }
   .show-caption .meta { max-width:620px; line-height:1.4; }
@@ -223,10 +221,13 @@
   let TILE = layout();
   let PITCHX = TILE.w + HGAP, PITCHY = TILE.h;
 
+  let scale = 1, introActive = true, introReady = false, introStart = 0, introX0 = 0, introY0 = 0;
+  const INTRO_DUR = 1600, INTRO_SCALE = 0.38;
+  const easeIO = (t) => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
   const liveVids = new Set();
   const videoObserver = new IntersectionObserver((es) => {
     es.forEach(e => { const v = e.target;
-      if (e.isIntersecting) { liveVids.add(v); if (!streakOn) v.play().catch(()=>{}); }
+      if (e.isIntersecting) { liveVids.add(v); if (!streakOn && !introActive) v.play().catch(()=>{}); }
       else { liveVids.delete(v); v.pause(); }
     });
   }, { rootMargin: "300px", threshold: 0.01 });
@@ -235,10 +236,9 @@
   const renderedTiles = new Set();
   function mediaEl(m) {
     if (!m) return '<div style="width:100%;height:100%;background:transparent"></div>';
-    if (isVideo(m)) return `<video src="${m.file}" autoplay loop muted playsinline preload="none" webkit-playsinline></video>`;
+    if (isVideo(m)) return `<video src="${m.file}" autoplay loop muted playsinline preload="none" webkit-playsinline${m.poster ? ` poster="${m.poster}"` : ""}></video>`;
     return `<img src="${m.file}" alt="" loading="lazy" decoding="async">`;
   }
-  let introMode = true, introIdx = 0;
   function buildCard(p, col, rowT) {
     const wrap = document.createElement("div");
     wrap.className = "card-wrap";
@@ -247,7 +247,6 @@
     wrap._p = p; wrap._col = col; wrap._row = rowT;
     wrap.innerHTML = `<div class="card" style="width:${p._pos.w}px;height:${p._pos.h}px;">${mediaEl(p.thumb)}</div>`;
     const cardEl = wrap.querySelector(".card");
-    if (introMode) { cardEl.classList.add("intro"); cardEl.style.animationDelay = Math.min(introIdx * 0.03, 0.6) + "s"; introIdx++; }
     cardEl.addEventListener("click", () => { if (dragDistance < 5) openShow(p); });
     const v = wrap.querySelector("video"); if (v) { v.muted = true; videoObserver.observe(v); }
     return wrap;
@@ -259,9 +258,11 @@
     canvas.appendChild(frag);
   }
   function ensureTilesAroundView() {
-    const cx = -canvasX + innerWidth / 2, cy = -canvasY + innerHeight / 2;
+    const cx = (-canvasX + innerWidth / 2) / scale, cy = (-canvasY + innerHeight / 2) / scale;
     const cCol = Math.floor(cx / PITCHX), cRow = Math.floor(cy / PITCHY);
-    for (let dc = -1; dc <= 1; dc++) for (let dr = -1; dr <= 1; dr++) renderTile(cCol + dc, cRow + dr);
+    const rc = introActive ? Math.ceil((innerWidth / scale / 2) / PITCHX) + 1 : 1;
+    const rr = introActive ? Math.ceil((innerHeight / scale / 2) / PITCHY) + 1 : 1;
+    for (let dc = -rc; dc <= rc; dc++) for (let dr = -rr; dr <= rr; dr++) renderTile(cCol + dc, cRow + dr);
   }
 
   /* ---- DRAG: crisp 1:1 while held, smooth drift on release ---- */
@@ -275,8 +276,24 @@
 
   const sOff = ["s1","s2","s3"].map(id => document.getElementById(id));
   let streakOn = false, sdx = 0, sdy = 0, prevCX = canvasX, prevCY = canvasY;
-  function tick() {
-    if (isDragging) { canvasX = targetX; canvasY = targetY; }
+  function endIntro() {
+    if (!introActive) return;
+    introActive = false; introReady = true; scale = 1; canvasX = targetX; canvasY = targetY;
+    canvas.style.opacity = "1";
+    liveVids.forEach(v => v.play().catch(()=>{}));
+  }
+  function tick(now) {
+    if (introActive) {
+      if (introReady) {                       // thumbnails preloaded -> play the reveal
+        if (!introStart) introStart = now;
+        const t = Math.min(1, (now - introStart) / INTRO_DUR), e = easeIO(t);
+        scale = INTRO_SCALE + (1 - INTRO_SCALE) * e;
+        canvasX = introX0 + (targetX - introX0) * e;
+        canvasY = introY0 + (targetY - introY0) * e;
+        canvas.style.opacity = e.toFixed(3);
+        if (t >= 1) endIntro();
+      }                                        // else: hold the zoomed-out frame, hidden
+    } else if (isDragging) { canvasX = targetX; canvasY = targetY; }
     else {
       targetX += velocityX; targetY += velocityY;
       velocityX *= FRICTION; velocityY *= FRICTION;
@@ -285,10 +302,10 @@
       canvasX += (targetX - canvasX) * FOLLOW;
       canvasY += (targetY - canvasY) * FOLLOW;
     }
-    canvas.style.transform = `translate3d(${Math.round(canvasX)}px, ${Math.round(canvasY)}px, 0)`;
+    canvas.style.transform = `translate3d(${canvasX.toFixed(1)}px, ${canvasY.toFixed(1)}px, 0) scale(${scale.toFixed(4)})`;
     // directional motion blur scaled by on-screen speed (desktop only)
     const ddx = canvasX - prevCX, ddy = canvasY - prevCY; prevCX = canvasX; prevCY = canvasY;
-    if (innerWidth > 820) {
+    if (innerWidth > 820 && !introActive) {
       // temporally smooth the per-frame delta so the trail glides instead of snapping
       sdx += (ddx - sdx) * 0.35; sdy += (ddy - sdy) * 0.35;
       const GAIN = 0.62, MAXOFF = 60, mag = Math.hypot(sdx, sdy);
@@ -304,7 +321,21 @@
     ensureTilesAroundView();
     requestAnimationFrame(tick);
   }
-  ensureTilesAroundView(); introMode = false; requestAnimationFrame(tick);
+  (function initIntro() {                    // start zoomed-out & hidden, focal point = final framing
+    const pxc = innerWidth / 2 - targetX, pyc = innerHeight / 2 - targetY;
+    introX0 = innerWidth / 2 - INTRO_SCALE * pxc; introY0 = innerHeight / 2 - INTRO_SCALE * pyc;
+    canvasX = introX0; canvasY = introY0; scale = INTRO_SCALE;
+  })();
+  function startReveal() { if (introReady || !introActive) return; introReady = true; introStart = 0; }
+  function preloadThumbs() {                   // wait until every thumbnail image (static + video poster) is ready
+    const urls = new Set();
+    PROJECTS.forEach(p => { const m = p.thumb; if (!m) return; const u = (isVideo(m) && m.poster) ? m.poster : m.file; if (u) urls.add(u); });
+    let pending = urls.size;
+    if (!pending) return startReveal();
+    urls.forEach(u => { const im = new Image(); im.onload = im.onerror = () => { if (--pending <= 0) startReveal(); }; im.src = u; });
+    setTimeout(startReveal, 2600);             // safety: never hang on a stalled asset
+  }
+  ensureTilesAroundView(); requestAnimationFrame(tick); preloadThumbs();
 
   // re-tile with new spacing when the viewport crosses a device breakpoint
   const tierOf = (w) => w >= 1800 ? "d" : w >= 768 ? "l" : "p";
@@ -326,6 +357,7 @@
   });
 
   function startDrag(x, y) {
+    endIntro();
     isDragging = true; viewport.classList.add("dragging");
     startX = x; startY = y; dragStartX = targetX; dragStartY = targetY; dragDistance = 0;
     velocityX = 0; velocityY = 0; lastX = x; lastY = y; lastT = performance.now();
@@ -345,6 +377,16 @@
   viewport.addEventListener("touchstart", e => { if (e.target.closest(".overlay")) return; startDrag(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
   addEventListener("touchmove", e => { if (!isDragging) return; moveDrag(e.touches[0].clientX, e.touches[0].clientY); }, { passive: true });
   addEventListener("touchend", endDrag);
+  // two-finger trackpad swipe (and mouse wheel) pans the canvas
+  viewport.addEventListener("wheel", (e) => {
+    if (e.ctrlKey) return;                          // ignore pinch-zoom
+    if (e.target.closest(".overlay")) return;       // let slideshow / about scroll normally
+    e.preventDefault(); endIntro();
+    const k = e.deltaMode === 1 ? 16 : 1;           // line-mode mice -> px
+    targetX -= e.deltaX * k; targetY -= e.deltaY * k;
+    canvasX = targetX; canvasY = targetY;
+    velocityX = 0; velocityY = 0;
+  }, { passive: false });
 
   /* ---- PROJECT SLIDESHOW ---- */
   const show = document.getElementById("show");
@@ -431,6 +473,7 @@
   window.closeAbout = closeAbout;
 
   addEventListener("keydown", e => {
+    endIntro();
     if (show.classList.contains("active")) {
       if (e.key === "Escape") closeShow();
       else if (e.key === "ArrowRight") scrollStep(1);

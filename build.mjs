@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import ffprobe from "@ffprobe-installer/ffprobe";
+import ffmpeg from "@ffmpeg-installer/ffmpeg";
 import sharp from "sharp";
 
 // retina-safe ceilings (longest edge, px). Files within these are left untouched.
@@ -58,6 +59,17 @@ function videoDims(file) {
   } catch { return null; }
 }
 
+// extract a video's first frame as a poster image (scaled to display dims) so video
+// thumbnails paint instantly like static images
+function posterFor(file, w, h) {
+  const out = file.replace(/\.[^.]+$/, ".poster.jpg");
+  try {
+    const vf = (w && h) ? `scale=${w}:${h}` : "scale=iw:ih";
+    execFileSync(ffmpeg.path, ["-y", "-loglevel", "error", "-i", file, "-frames:v", "1", "-vf", vf, "-q:v", "3", out]);
+    return path.relative(OUT, out).split(path.sep).join("/");
+  } catch (e) { console.warn("  poster skip", path.basename(file), e.message); return null; }
+}
+
 // Quality-first image optimization. Only DOWNSCALES files past the ceiling
 // (single high-quality Lanczos resample + near-lossless encode). Files already
 // within budget are left exactly as uploaded — no re-compression, no quality loss.
@@ -99,11 +111,16 @@ for (const rec of records) {
   async function media(att, fname, maxEdge) {
     const dest = path.join(folder, fname);
     await download(att.url, dest);
-    let w = att.width, h = att.height;
+    let w = att.width, h = att.height, poster;
     const type = att.type || "";
-    if (type.startsWith("video")) { const d = videoDims(dest); if (d) { w = d.width; h = d.height; } }
+    if (type.startsWith("video")) {
+      const d = videoDims(dest); if (d) { w = d.width; h = d.height; }
+      poster = posterFor(dest, w, h);
+    }
     else if (maxEdge) { const d = await optimizeImage(dest, maxEdge); if (d) { w = d.width; h = d.height; } }
-    return { file: path.relative(OUT, dest).split(path.sep).join("/"), type, w, h };
+    const out = { file: path.relative(OUT, dest).split(path.sep).join("/"), type, w, h };
+    if (poster) out.poster = poster;
+    return out;
   }
 
   const th = f[F.thumb] || [], imgs = f[F.imgs] || [];
