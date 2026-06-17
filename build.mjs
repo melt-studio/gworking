@@ -92,7 +92,8 @@ for (const rec of records) {
   const f = rec.fields;
   if (f[F.name] === "About") { about = f[F.copy] || ""; continue; }
   if (!f[F.name]) continue;
-  const slug = slugify(f[F.name]);
+  // unique per record so duplicate project titles never share/overwrite an asset folder
+  const slug = slugify(f[F.name]) + "-" + rec.id;
   const folder = path.join(ASSETS, slug);
 
   async function media(att, fname, maxEdge) {
