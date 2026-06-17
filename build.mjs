@@ -27,12 +27,18 @@ const extFor  = a => { const e = path.extname(a.filename||"").toLowerCase();
 const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
 async function fetchAll() {
-  let records = [], offset;
+  // read records in the grid view's row order (top of the table = seen first on the site)
+  let records = [], offset, view = process.env.AIRTABLE_VIEW || "Grid view";
   do {
     const u = new URL(`https://api.airtable.com/v0/${BASE}/${encodeURIComponent(TABLE)}`);
     u.searchParams.set("pageSize","100");
+    if (view) u.searchParams.set("view", view);
     if (offset) u.searchParams.set("offset", offset);
     const r = await fetch(u, { headers: { Authorization: `Bearer ${TOKEN}` } });
+    if (!r.ok && view) {                 // view name not found -> fall back to default order
+      console.warn(`  view "${view}" not usable (${r.status}); using default record order`);
+      view = null; continue;
+    }
     if (!r.ok) throw new Error(`Airtable ${r.status}: ${await r.text()}`);
     const j = await r.json(); records.push(...j.records); offset = j.offset;
   } while (offset);
