@@ -40,7 +40,7 @@
   body.about-open .hud-tr { opacity:0; pointer-events:none; transition: opacity .7s var(--easein); }  /* open: crossfade w/ X */
 
   .uline { position:relative; cursor:pointer; display:inline-block; color:var(--fg); text-decoration:none; }
-  .uline::after { content:""; position:absolute; left:0; bottom:-3px; height:1px; width:100%;
+  .uline::after { content:""; position:absolute; left:0; bottom:-3px; height:1.5px; width:100%;
     background:currentColor; transform:scaleX(0); transform-origin:left center; transition:transform .55s var(--easein); }
   .uline:hover::after { transform:scaleX(1); }
 
@@ -95,7 +95,7 @@
   .about-inner .a-contact a:focus {
     position:relative; display:inline-block; color:var(--fg); opacity:1; visibility:visible;
     text-decoration:none; cursor:pointer; outline:none; -webkit-tap-highlight-color:transparent; }
-  .about-inner .a-contact a::after { content:""; position:absolute; left:0; bottom:-3px; height:1px; width:100%;
+  .about-inner .a-contact a::after { content:""; position:absolute; left:0; bottom:-3px; height:1.5px; width:100%;
     background:currentColor; transform:scaleX(1); transform-origin:right center; transition:transform .55s var(--easein); }
   .about-inner .a-contact a:hover::after { transform:scaleX(0); }
 
@@ -121,14 +121,7 @@
 <body>
 
 <div class="viewport" id="viewport"><div class="canvas" id="canvas"></div></div>
-<svg class="mb-defs" width="0" height="0" aria-hidden="true" style="position:absolute"><filter id="streak" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
-  <feOffset id="s1" in="SourceGraphic" dx="0" dy="0" result="o1"/><feComponentTransfer in="o1" result="t1"><feFuncA type="linear" slope="0.42"/></feComponentTransfer>
-  <feOffset id="s2" in="SourceGraphic" dx="0" dy="0" result="o2"/><feComponentTransfer in="o2" result="t2"><feFuncA type="linear" slope="0.26"/></feComponentTransfer>
-  <feOffset id="s3" in="SourceGraphic" dx="0" dy="0" result="o3"/><feComponentTransfer in="o3" result="t3"><feFuncA type="linear" slope="0.13"/></feComponentTransfer>
-  <feMerge result="ghosts"><feMergeNode in="t3"/><feMergeNode in="t2"/><feMergeNode in="t1"/></feMerge>
-  <feGaussianBlur in="ghosts" stdDeviation="1.6" result="gb"/>
-  <feMerge><feMergeNode in="gb"/><feMergeNode in="SourceGraphic"/></feMerge>
-</filter></svg>
+<svg class="mb-defs" width="0" height="0" aria-hidden="true" style="position:absolute"><filter id="mblur" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB"><feGaussianBlur id="mbg" in="SourceGraphic" stdDeviation="0 0"/></filter></svg>
 
 <div class="hud hud-tl">GREG ZADROZNY IS A CREATIVE DIRECTOR</div>
 <div class="hud hud-tr"><span class="uline" id="aboutBtn">ABOUT</span></div>
@@ -274,7 +267,7 @@
   const FOLLOW = 0.12, FRICTION = 0.95, VMAX = 26;
   const clamp = (v) => Math.max(-VMAX, Math.min(VMAX, v));
 
-  const sOff = ["s1","s2","s3"].map(id => document.getElementById(id));
+  const mbg = document.getElementById("mbg");
   let streakOn = false, sdx = 0, sdy = 0, prevCX = canvasX, prevCY = canvasY;
   function endIntro() {
     if (!introActive) return;
@@ -306,22 +299,22 @@
     // directional motion blur scaled by on-screen speed (desktop only)
     const ddx = canvasX - prevCX, ddy = canvasY - prevCY; prevCX = canvasX; prevCY = canvasY;
     if (innerWidth > 820 && !introActive) {
-      // temporally smooth the per-frame delta so the trail glides instead of snapping
+      // smoothed, directional motion blur (single pass -> smooth on live)
       sdx += (ddx - sdx) * 0.35; sdy += (ddy - sdy) * 0.35;
-      const GAIN = 0.62, MAXOFF = 60, mag = Math.hypot(sdx, sdy);
-      if (mag > 0.35) {
-        for (let i = 0; i < sOff.length; i++) {
-          let dx = Math.max(-MAXOFF, Math.min(MAXOFF, -sdx * (i + 1) * GAIN));
-          let dy = Math.max(-MAXOFF, Math.min(MAXOFF, -sdy * (i + 1) * GAIN));
-          sOff[i].setAttribute("dx", dx.toFixed(1)); sOff[i].setAttribute("dy", dy.toFixed(1));
-        }
-        if (!streakOn) { viewport.style.filter = "url(#streak)"; streakOn = true; liveVids.forEach(v => v.pause()); }
+      let bx = Math.min(Math.abs(sdx) * 0.5, 6), by = Math.min(Math.abs(sdy) * 0.5, 6);
+      if (bx >= by) by *= 0.25; else bx *= 0.25;          // keep it directional
+      if (bx + by > 0.4) {
+        mbg.setAttribute("stdDeviation", bx.toFixed(2) + " " + by.toFixed(2));
+        if (!streakOn) { viewport.style.filter = "url(#mblur)"; streakOn = true; liveVids.forEach(v => v.pause()); }
       } else if (streakOn) { viewport.style.filter = "none"; streakOn = false; liveVids.forEach(v => v.play().catch(()=>{})); }
     }
     ensureTilesAroundView();
     requestAnimationFrame(tick);
   }
   (function initIntro() {                    // start zoomed-out & hidden, focal point = final framing
+    if (innerWidth <= 768) {                 // phones: no zoom intro -> render immediately & visible
+      introActive = false; scale = 1; canvasX = targetX; canvasY = targetY; canvas.style.opacity = "1"; return;
+    }
     const pxc = innerWidth / 2 - targetX, pyc = innerHeight / 2 - targetY;
     introX0 = innerWidth / 2 - INTRO_SCALE * pxc; introY0 = innerHeight / 2 - INTRO_SCALE * pyc;
     canvasX = introX0; canvasY = introY0; scale = INTRO_SCALE;
@@ -335,7 +328,7 @@
     urls.forEach(u => { const im = new Image(); im.onload = im.onerror = () => { if (--pending <= 0) startReveal(); }; im.src = u; });
     setTimeout(startReveal, 2600);             // safety: never hang on a stalled asset
   }
-  ensureTilesAroundView(); requestAnimationFrame(tick); preloadThumbs();
+  ensureTilesAroundView(); requestAnimationFrame(tick); if (introActive) preloadThumbs();
 
   // re-tile with new spacing when the viewport crosses a device breakpoint
   const tierOf = (w) => w >= 1800 ? "d" : w >= 768 ? "l" : "p";
