@@ -3,7 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GREG ZADROZNY — PROJECTS</title>
+<title>Greg Zadrozny — Creative Director</title>
+<link rel="apple-touch-icon" sizes="180x180" href="assets/favicon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="assets/favicon/favicon-16x16.png">
+<link rel="shortcut icon" href="assets/favicon/favicon.ico">
+<link rel="manifest" href="assets/favicon/site.webmanifest">
 <style>
   :root { --bg:#e8ecf0; --fg:#0E0D0D; --tracking:0.02em;
           --ease:cubic-bezier(0.65,0,0.35,1); --easein:cubic-bezier(0.33,0,0.2,1); }
@@ -13,6 +18,7 @@
     font-family:"Helvetica Neue", Helvetica, Arial, sans-serif; font-weight:400;
     background:var(--bg); color:var(--fg); text-transform:uppercase;
     user-select:none; -webkit-user-select:none; letter-spacing:var(--tracking);
+    cursor:default;
   }
   .viewport { position:fixed; inset:0; overflow:hidden; cursor:grab; }
   .viewport.dragging { cursor:grabbing; }
@@ -21,7 +27,7 @@
   .card-wrap { position:absolute; }
   .card { width:100%; height:100%; cursor:pointer; overflow:hidden; position:relative;
     background:transparent; transition:transform 1.1s var(--ease); }
-  .card:hover { transform:scale(1.135); }
+  .card:hover { transform:scale(1.08); }
   @keyframes cardIn { from { opacity:0; transform:translateY(16px) scale(.985); } to { opacity:1; transform:none; } }
   .card.intro { animation: cardIn .7s var(--easein) backwards; }
   .card img, .card video { width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; background:transparent; }
@@ -42,8 +48,9 @@
     display:flex; flex-direction:column; overflow:hidden; }
   .overlay.active { opacity:1; pointer-events:auto; }
   .overlay.closing { transition:opacity .9s ease; }
-  .ov-close { position:absolute; top:30px; right:36px; width:30px; height:30px; background:none; border:none; cursor:pointer; z-index:120; display:flex; align-items:center; justify-content:center; padding:0; }
-  .ov-close svg { width:22px; height:22px; stroke:var(--fg); stroke-width:2; fill:none; opacity:.85; transition:opacity .2s ease; }
+  #about.closing { transition:opacity .3s ease; }
+  .ov-close { position:absolute; top:30px; right:36px; width:32px; height:32px; background:none; border:none; cursor:pointer; z-index:120; display:flex; align-items:center; justify-content:center; padding:0; }
+  .ov-close svg { width:26px; height:26px; stroke:var(--fg); stroke-width:1.8; fill:none; opacity:.85; transition:opacity .2s ease; }
   .ov-close:hover svg { opacity:1; }
 
   /* ===== PROJECT — FILMSTRIP SLIDESHOW ===== */
@@ -60,7 +67,7 @@
   .vtoggle svg { width:13px; height:13px; fill:#fff; }
 
   .show-caption { flex:0 0 auto; display:flex; justify-content:space-between; align-items:flex-end;
-    gap:48px; padding:0 140px 84px 90px; color:var(--fg); font-size:13px; letter-spacing:var(--tracking);
+    gap:48px; padding:0 36px 84px 90px; color:var(--fg); font-size:13px; letter-spacing:var(--tracking);
     opacity:0; transition:opacity .6s var(--easein) .55s; }
   .overlay.active .show-caption { opacity:1; }
   .show-caption .meta { max-width:1000px; line-height:1.4; }
@@ -75,17 +82,46 @@
   .overlay.active .about-inner { opacity:1; transform:none; }
   .about-inner .a-name { display:block; margin-bottom:22px; }
   .about-inner p { margin-bottom:15px; }
+  .about-inner .a-contact { margin-top:24px; }
+  .about-inner .a-contact a,
+  .about-inner .a-contact a:link,
+  .about-inner .a-contact a:visited,
+  .about-inner .a-contact a:hover,
+  .about-inner .a-contact a:active,
+  .about-inner .a-contact a:focus {
+    position:relative; display:inline-block; color:var(--fg); opacity:1; visibility:visible;
+    text-decoration:none; cursor:pointer; outline:none; -webkit-tap-highlight-color:transparent; }
+  .about-inner .a-contact a::after { content:""; position:absolute; left:0; bottom:-3px; height:1px; width:100%;
+    background:currentColor; transform:scaleX(1); transform-origin:right center; transition:transform .55s var(--easein); }
+  .about-inner .a-contact a:hover::after { transform:scaleX(0); }
 
   @media (max-width:768px) {
-    .show-strip { padding:96px 24px 16px 24px; }
-    .show-caption { flex-direction:column; align-items:flex-start; gap:8px; padding:0 24px 28px; }
+    .hud { font-size:11px; }
+    .hud-tl { height:auto; max-width:62vw; line-height:1.35; }
+    /* slideshow -> vertical stack, copy at top */
+    .show-strip { order:2; flex-direction:column; align-items:stretch; gap:14px;
+      overflow-x:hidden; overflow-y:auto; padding:14px 20px 48px; cursor:default !important; }
+    .show-strip.single { justify-content:flex-start; }
+    .slide { height:auto; width:100%; aspect-ratio:auto; }
+    .slide img, .slide video { width:100%; height:auto; max-height:none; }
+    .show-caption { order:1; flex-direction:column; align-items:flex-start; gap:8px; padding:92px 20px 18px; }
     .show-caption .meta { max-width:none; }
+    .show-caption .num { display:none; }
+    .about-inner { max-width:none; padding:88px 24px 48px; }
   }
 </style>
 </head>
 <body>
 
 <div class="viewport" id="viewport"><div class="canvas" id="canvas"></div></div>
+<svg class="mb-defs" width="0" height="0" aria-hidden="true" style="position:absolute"><filter id="streak" x="-70%" y="-70%" width="240%" height="240%" color-interpolation-filters="sRGB">
+  <feOffset id="s1" in="SourceGraphic" dx="0" dy="0" result="o1"/><feComponentTransfer in="o1" result="t1"><feFuncA type="linear" slope="0.42"/></feComponentTransfer>
+  <feOffset id="s2" in="SourceGraphic" dx="0" dy="0" result="o2"/><feComponentTransfer in="o2" result="t2"><feFuncA type="linear" slope="0.26"/></feComponentTransfer>
+  <feOffset id="s3" in="SourceGraphic" dx="0" dy="0" result="o3"/><feComponentTransfer in="o3" result="t3"><feFuncA type="linear" slope="0.13"/></feComponentTransfer>
+  <feMerge result="ghosts"><feMergeNode in="t3"/><feMergeNode in="t2"/><feMergeNode in="t1"/></feMerge>
+  <feGaussianBlur in="ghosts" stdDeviation="1.6" result="gb"/>
+  <feMerge><feMergeNode in="gb"/><feMergeNode in="SourceGraphic"/></feMerge>
+</filter></svg>
 
 <div class="hud hud-tl">GREG ZADROZNY IS A CREATIVE DIRECTOR</div>
 <div class="hud hud-tr"><span class="uline" id="aboutBtn">ABOUT</span></div>
@@ -109,6 +145,7 @@
   <div class="about-inner">
     <span class="a-name">__ABOUTHEAD__</span>
     __ABOUT__
+    <p class="a-contact"><a href="mailto:hello@gregworking.com">Reach out for inquiries</a></p>
   </div>
 </div>
 
@@ -216,6 +253,8 @@
   const FOLLOW = 0.12, FRICTION = 0.95, VMAX = 26;
   const clamp = (v) => Math.max(-VMAX, Math.min(VMAX, v));
 
+  const sOff = ["s1","s2","s3"].map(id => document.getElementById(id));
+  let streakOn = false, sdx = 0, sdy = 0, prevCX = canvasX, prevCY = canvasY;
   function tick() {
     if (isDragging) { canvasX = targetX; canvasY = targetY; }
     else {
@@ -227,6 +266,21 @@
       canvasY += (targetY - canvasY) * FOLLOW;
     }
     canvas.style.transform = `translate3d(${Math.round(canvasX)}px, ${Math.round(canvasY)}px, 0)`;
+    // directional motion blur scaled by on-screen speed (desktop only)
+    const ddx = canvasX - prevCX, ddy = canvasY - prevCY; prevCX = canvasX; prevCY = canvasY;
+    if (innerWidth > 820) {
+      // temporally smooth the per-frame delta so the trail glides instead of snapping
+      sdx += (ddx - sdx) * 0.35; sdy += (ddy - sdy) * 0.35;
+      const GAIN = 0.62, MAXOFF = 60, mag = Math.hypot(sdx, sdy);
+      if (mag > 0.35) {
+        for (let i = 0; i < sOff.length; i++) {
+          let dx = Math.max(-MAXOFF, Math.min(MAXOFF, -sdx * (i + 1) * GAIN));
+          let dy = Math.max(-MAXOFF, Math.min(MAXOFF, -sdy * (i + 1) * GAIN));
+          sOff[i].setAttribute("dx", dx.toFixed(1)); sOff[i].setAttribute("dy", dy.toFixed(1));
+        }
+        if (!streakOn) { viewport.style.filter = "url(#streak)"; streakOn = true; }
+      } else if (streakOn) { viewport.style.filter = "none"; streakOn = false; }
+    }
     ensureTilesAroundView();
     requestAnimationFrame(tick);
   }
@@ -323,7 +377,7 @@
   const about = document.getElementById("about");
   document.getElementById("aboutBtn").addEventListener("click", () => about.classList.add("active"));
   document.getElementById("aboutBtn").addEventListener("mousedown", e => e.stopPropagation());
-  function closeAbout() { about.classList.add("closing"); about.classList.remove("active"); setTimeout(()=>about.classList.remove("closing"), 900); }
+  function closeAbout() { about.classList.add("closing"); about.classList.remove("active"); setTimeout(()=>about.classList.remove("closing"), 320); }
   window.closeAbout = closeAbout;
 
   addEventListener("keydown", e => {

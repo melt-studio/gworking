@@ -4,6 +4,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import ffprobe from "@ffprobe-installer/ffprobe";
+import sharp from "sharp";
+
+// retina-safe ceilings (longest edge, px). Files within these are left untouched.
+const MAX_THUMB = 1200;
+const MAX_SLIDE = 2560;
 
 const TOKEN = process.env.AIRTABLE_TOKEN;
 const BASE  = process.env.AIRTABLE_BASE_ID || "appJ5XFh9jxMVKJYA";
@@ -53,6 +58,32 @@ function videoDims(file) {
   } catch { return null; }
 }
 
+// Quality-first image optimization. Only DOWNSCALES files past the ceiling
+// (single high-quality Lanczos resample + near-lossless encode). Files already
+// within budget are left exactly as uploaded — no re-compression, no quality loss.
+async function optimizeImage(file, maxEdge) {
+  const ext = path.extname(file).toLowerCase();
+  if (![".jpg", ".jpeg", ".png", ".webp"].includes(ext)) return null;  // skip gif/mp4/etc
+  try {
+    const meta = await sharp(file).metadata();
+    const longest = Math.max(meta.width || 0, meta.height || 0);
+    const needResize = longest > maxEdge;
+    // JPEGs within budget: leave untouched to avoid generation loss.
+    if ((ext === ".jpg" || ext === ".jpeg") && !needResize) return { width: meta.width, height: meta.height };
+
+    let p = sharp(file, { failOn: "none" });
+    if (needResize) p = p.resize(maxEdge, maxEdge, { fit: "inside", withoutEnlargement: true, kernel: "lanczos3" });
+    if (ext === ".png")       p = p.png({ compressionLevel: 9 });                                  // lossless
+    else if (ext === ".webp") p = p.webp({ quality: 92 });
+    else                      p = p.jpeg({ quality: 92, mozjpeg: true, chromaSubsampling: "4:4:4" }); // full chroma
+
+    const buf = await p.toBuffer();
+    const fin = await sharp(buf).metadata();
+    if (needResize || buf.length < fs.statSync(file).size) fs.writeFileSync(file, buf);  // never bloat
+    return { width: fin.width, height: fin.height };
+  } catch (e) { console.warn("  optimize skip", path.basename(file), e.message); return null; }
+}
+
 const records = await fetchAll();
 let about = "";
 const projects = [];
@@ -64,18 +95,20 @@ for (const rec of records) {
   const slug = slugify(f[F.name]);
   const folder = path.join(ASSETS, slug);
 
-  async function media(att, fname) {
+  async function media(att, fname, maxEdge) {
     const dest = path.join(folder, fname);
     await download(att.url, dest);
     let w = att.width, h = att.height;
-    if ((att.type||"").startsWith("video")) { const d = videoDims(dest); if (d) { w = d.width; h = d.height; } }
-    return { file: path.relative(OUT, dest).split(path.sep).join("/"), type: att.type, w, h };
+    const type = att.type || "";
+    if (type.startsWith("video")) { const d = videoDims(dest); if (d) { w = d.width; h = d.height; } }
+    else if (maxEdge) { const d = await optimizeImage(dest, maxEdge); if (d) { w = d.width; h = d.height; } }
+    return { file: path.relative(OUT, dest).split(path.sep).join("/"), type, w, h };
   }
 
   const th = f[F.thumb] || [], imgs = f[F.imgs] || [];
-  const thumb = th[0] ? await media(th[0], "thumbnail" + extFor(th[0])) : null;
+  const thumb = th[0] ? await media(th[0], "thumbnail" + extFor(th[0]), MAX_THUMB) : null;
   const slides = [];
-  for (let i = 0; i < imgs.length; i++) slides.push(await media(imgs[i], String(i+1).padStart(2,"0") + extFor(imgs[i])));
+  for (let i = 0; i < imgs.length; i++) slides.push(await media(imgs[i], String(i+1).padStart(2,"0") + extFor(imgs[i]), MAX_SLIDE));
 
   projects.push({ name: f[F.name], slug, client: f[F.client] || "", copy: f[F.copy] || "", thumb, slides, gallery: [] });
   console.log(`  ${slug}: thumb ${thumb?1:0}, slides ${slides.length}`);
@@ -92,5 +125,15 @@ const html = fs.readFileSync("template.html","utf8")
   .replace("__ABOUT__", aboutParas);
 
 fs.mkdirSync(OUT, { recursive: true });
+
+// copy static favicon assets into the output (served at /assets/favicon/*)
+const FAV_SRC = "static/favicon", FAV_DST = path.join(OUT, "assets", "favicon");
+if (fs.existsSync(FAV_SRC)) {
+  fs.mkdirSync(FAV_DST, { recursive: true });
+  const fav = fs.readdirSync(FAV_SRC);
+  for (const fn of fav) fs.copyFileSync(path.join(FAV_SRC, fn), path.join(FAV_DST, fn));
+  console.log(`  copied ${fav.length} favicon files -> ${FAV_DST}`);
+}
+
 fs.writeFileSync(path.join(OUT, "index.html"), html);
 console.log(`\nBuilt ${projects.length} projects -> ${OUT}/index.html`);

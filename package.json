@@ -8,6 +8,7 @@
     "build": "node build.mjs"
   },
   "dependencies": {
-    "@ffprobe-installer/ffprobe": "^2.1.2"
+    "@ffprobe-installer/ffprobe": "^2.1.2",
+    "sharp": "^0.33.5"
   }
 }
