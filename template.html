@@ -229,7 +229,10 @@
   const renderedTiles = new Set();
   function mediaEl(m) {
     if (!m) return '<div style="width:100%;height:100%;background:transparent"></div>';
-    if (isVideo(m)) return `<video src="${m.file}" autoplay loop muted playsinline preload="none" webkit-playsinline${m.poster ? ` poster="${m.poster}"` : ""}></video>`;
+    if (isVideo(m)) {
+      if (innerWidth <= 768) return `<img src="${m.poster || m.file}" alt="" loading="lazy" decoding="async">`;  // mobile: static poster, no video element
+      return `<video src="${m.file}" autoplay loop muted playsinline preload="none" webkit-playsinline${m.poster ? ` poster="${m.poster}"` : ""}></video>`;
+    }
     return `<img src="${m.file}" alt="" loading="lazy" decoding="async">`;
   }
   function buildCard(p, col, rowT) {
@@ -269,10 +272,20 @@
 
   const mbg = document.getElementById("mbg");
   let streakOn = false, sdx = 0, sdy = 0, prevCX = canvasX, prevCY = canvasY;
+  function pruneTiles() {                    // after the wide intro, drop the far-off tiles (frees video elements)
+    const cx = (-canvasX + innerWidth / 2) / scale, cy = (-canvasY + innerHeight / 2) / scale;
+    const cCol = Math.floor(cx / PITCHX), cRow = Math.floor(cy / PITCHY);
+    canvas.querySelectorAll(".card-wrap").forEach(w => {
+      if (Math.abs(w._col - cCol) > 1 || Math.abs(w._row - cRow) > 1) w.remove();
+    });
+    renderedTiles.clear();
+    canvas.querySelectorAll(".card-wrap").forEach(w => renderedTiles.add(w._col + "," + w._row));
+  }
   function endIntro() {
     if (!introActive) return;
     introActive = false; introReady = true; scale = 1; canvasX = targetX; canvasY = targetY;
     canvas.style.opacity = "1";
+    pruneTiles();
     liveVids.forEach(v => v.play().catch(()=>{}));
   }
   function tick(now) {
@@ -403,7 +416,7 @@
     strip.innerHTML = media.map(m => {
       const a = aspectOf(m, 1.5);
       const inner = isVideo(m)
-        ? `<video src="${m.file}" autoplay loop muted playsinline></video><button class="vtoggle" aria-label="Play/pause">${PAUSE}</button>`
+        ? `<video src="${m.file}" autoplay loop muted playsinline${m.poster ? ` poster="${m.poster}"` : ""}></video><button class="vtoggle" aria-label="Play/pause">${PAUSE}</button>`
         : `<img src="${m.file}" alt="" loading="lazy">`;
       return `<div class="slide" style="--aspect:${a};">${inner}</div>`;
     }).join("");
@@ -416,9 +429,11 @@
     strip.classList.toggle("single", single);
     strip.style.cursor = single ? "default" : "";
     show.classList.remove("closing"); show.classList.add("active");
+    liveVids.forEach(v => v.pause());
   }
   function closeShow() {
     show.classList.add("closing"); show.classList.remove("active");
+    liveVids.forEach(v => v.play().catch(()=>{}));
     setTimeout(() => { show.classList.remove("closing"); strip.innerHTML = ""; }, 900);
   }
   window.closeShow = closeShow;
@@ -460,9 +475,9 @@
 
   /* ---- ABOUT ---- */
   const about = document.getElementById("about");
-  document.getElementById("aboutBtn").addEventListener("click", () => { about.classList.add("active"); document.body.classList.add("about-open"); });
+  document.getElementById("aboutBtn").addEventListener("click", () => { about.classList.add("active"); document.body.classList.add("about-open"); liveVids.forEach(v => v.pause()); });
   document.getElementById("aboutBtn").addEventListener("mousedown", e => e.stopPropagation());
-  function closeAbout() { about.classList.add("closing"); about.classList.remove("active"); document.body.classList.remove("about-open"); setTimeout(()=>about.classList.remove("closing"), 320); }
+  function closeAbout() { about.classList.add("closing"); about.classList.remove("active"); document.body.classList.remove("about-open"); liveVids.forEach(v => v.play().catch(()=>{})); setTimeout(()=>about.classList.remove("closing"), 320); }
   window.closeAbout = closeAbout;
 
   addEventListener("keydown", e => {
