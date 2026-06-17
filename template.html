@@ -24,18 +24,22 @@
   .viewport.dragging { cursor:grabbing; }
   .canvas { position:absolute; left:0; top:0; width:1px; height:1px; will-change:transform; }
 
-  .card-wrap { position:absolute; }
+  .card-wrap { position:absolute; transition:left .55s var(--ease), top .55s var(--ease); }
   .card { width:100%; height:100%; cursor:pointer; overflow:hidden; position:relative;
-    background:transparent; transition:transform 1.1s var(--ease); }
+    background:transparent; transition:transform 1.1s var(--ease), width .55s var(--ease), height .55s var(--ease); }
   .card:hover { transform:scale(1.08); }
   @keyframes cardIn { from { opacity:0; transform:translateY(16px) scale(.985); } to { opacity:1; transform:none; } }
   .card.intro { animation: cardIn .7s var(--easein) backwards; }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
   .card img, .card video { width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; background:transparent; }
 
   .hud { position:fixed; z-index:10; font-size:12px; letter-spacing:var(--tracking); line-height:1.4; color:var(--fg); }
   .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; }
   .hud-tr { top:30px; right:36px; height:30px; display:flex; align-items:center; }   /* matches X */
   .hud-bl { bottom:24px; left:34px; } .hud-br { bottom:24px; right:36px; text-align:right; }
+  .hud-tl, .hud-tr, .hud-bl { animation: fadeUp .7s var(--easein) .5s backwards; }   /* text in after images */
+  .hud-tr { transition: opacity .35s var(--easein); }                                /* close: ABOUT fades back fast */
+  body.about-open .hud-tr { opacity:0; pointer-events:none; transition: opacity .7s var(--easein); }  /* open: crossfade w/ X */
 
   .uline { position:relative; cursor:pointer; display:inline-block; color:var(--fg); text-decoration:none; }
   .uline::after { content:""; position:absolute; left:0; bottom:-3px; height:1px; width:100%;
@@ -52,14 +56,16 @@
   .ov-close { position:absolute; top:30px; right:36px; width:32px; height:32px; background:none; border:none; cursor:pointer; z-index:120; display:flex; align-items:center; justify-content:center; padding:0; }
   .ov-close svg { width:26px; height:26px; stroke:var(--fg); stroke-width:1.8; fill:none; opacity:.85; transition:opacity .2s ease; }
   .ov-close:hover svg { opacity:1; }
+  .overlay.closing .ov-close svg { opacity:0; transition:opacity .12s ease; }
 
   /* ===== PROJECT — FILMSTRIP SLIDESHOW ===== */
   .show-strip { flex:1; display:flex; align-items:center; gap:6px; overflow-x:auto; overflow-y:hidden;
-    padding:128px 140px 56px 90px; min-height:0; scrollbar-width:none; }
+    padding:96px 80px 40px 80px; min-height:0; scrollbar-width:none; }
   .show-strip.single { justify-content:center; }
   .show-strip::-webkit-scrollbar { display:none; }
   .slide { flex:0 0 auto; height:100%; aspect-ratio:var(--aspect,1.5); background:transparent; position:relative; }
   .slide img, .slide video { width:100%; height:100%; object-fit:contain; display:block; }
+  .overlay.active .slide { animation: fadeUp .55s var(--easein) backwards; }
   .vtoggle { position:absolute; left:12px; bottom:12px; width:34px; height:34px; border:none; border-radius:50%;
     background:rgba(0,0,0,.45); color:#fff; cursor:pointer; font-size:12px; line-height:34px; text-align:center; padding:0;
     display:flex; align-items:center; justify-content:center; transition:background .2s ease; }
@@ -67,17 +73,17 @@
   .vtoggle svg { width:13px; height:13px; fill:#fff; }
 
   .show-caption { flex:0 0 auto; display:flex; justify-content:space-between; align-items:flex-end;
-    gap:48px; padding:0 36px 84px 90px; color:var(--fg); font-size:13px; letter-spacing:var(--tracking);
-    opacity:0; transition:opacity .6s var(--easein) .55s; }
-  .overlay.active .show-caption { opacity:1; }
-  .show-caption .meta { max-width:1000px; line-height:1.4; }
+    gap:48px; padding:0 36px 56px 80px; color:var(--fg); font-size:12px; letter-spacing:var(--tracking);
+    opacity:0; transform:translateY(14px); transition:opacity .6s var(--easein) .4s, transform .6s var(--easein) .4s; }
+  .overlay.active .show-caption { opacity:1; transform:none; }
+  .show-caption .meta { max-width:620px; line-height:1.4; }
   .show-caption .nm { display:block; margin-bottom:10px; }
   .show-caption .desc { display:block; margin-bottom:10px; }
   .show-caption .cl { display:block; }
   .show-caption .num { white-space:nowrap; }
 
   /* ===== ABOUT ===== */
-  .about-inner { margin:auto; max-width:720px; padding:40px; font-size:13px; letter-spacing:var(--tracking); line-height:1.6;
+  .about-inner { margin:auto; max-width:720px; padding:40px; font-size:12px; letter-spacing:var(--tracking); line-height:1.6;
     opacity:0; transform:translateY(12px); transition:opacity .6s var(--easein) .1s, transform .6s var(--easein) .1s; }
   .overlay.active .about-inner { opacity:1; transform:none; }
   .about-inner .a-name { display:block; margin-bottom:22px; }
@@ -97,24 +103,27 @@
 
   @media (max-width:768px) {
     .hud { font-size:11px; }
-    .hud-tl { height:auto; max-width:62vw; line-height:1.35; }
+    .hud-tl { height:auto; max-width:60vw; line-height:1.35; align-items:flex-start; }
+    .hud-tr { align-items:flex-start; height:auto; line-height:1.35; }
     /* slideshow -> vertical stack, copy at top */
     .show-strip { order:2; flex-direction:column; align-items:stretch; gap:14px;
       overflow-x:hidden; overflow-y:auto; padding:14px 20px 48px; cursor:default !important; }
     .show-strip.single { justify-content:flex-start; }
     .slide { height:auto; width:100%; aspect-ratio:auto; }
     .slide img, .slide video { width:100%; height:auto; max-height:none; }
-    .show-caption { order:1; flex-direction:column; align-items:flex-start; gap:8px; padding:92px 20px 18px; }
+    .show-caption { order:1; flex-direction:column; align-items:flex-start; gap:8px; padding:92px 20px 18px; font-size:11px;
+      transition:transform .4s var(--easein), opacity .4s var(--easein), margin-top .4s var(--easein); }
+    .show-caption.tuck { transform:translateY(-14px); opacity:0; pointer-events:none; }
     .show-caption .meta { max-width:none; }
     .show-caption .num { display:none; }
-    .about-inner { max-width:none; padding:88px 24px 48px; }
+    .about-inner { max-width:none; padding:88px 24px 48px; font-size:11px; }
   }
 </style>
 </head>
 <body>
 
 <div class="viewport" id="viewport"><div class="canvas" id="canvas"></div></div>
-<svg class="mb-defs" width="0" height="0" aria-hidden="true" style="position:absolute"><filter id="streak" x="-70%" y="-70%" width="240%" height="240%" color-interpolation-filters="sRGB">
+<svg class="mb-defs" width="0" height="0" aria-hidden="true" style="position:absolute"><filter id="streak" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">
   <feOffset id="s1" in="SourceGraphic" dx="0" dy="0" result="o1"/><feComponentTransfer in="o1" result="t1"><feFuncA type="linear" slope="0.42"/></feComponentTransfer>
   <feOffset id="s2" in="SourceGraphic" dx="0" dy="0" result="o2"/><feComponentTransfer in="o2" result="t2"><feFuncA type="linear" slope="0.26"/></feComponentTransfer>
   <feOffset id="s3" in="SourceGraphic" dx="0" dy="0" result="o3"/><feComponentTransfer in="o3" result="t3"><feFuncA type="linear" slope="0.13"/></feComponentTransfer>
@@ -151,7 +160,7 @@
 
 <script>
   const PROJECTS = __PAYLOAD__;
-  const CUR_L = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2746%27%20height%3D%2746%27%20viewBox%3D%270%200%2046%2046%27%3E%3Cpolyline%20points%3D%2727%2013%2015%2023%2027%2033%27%20fill%3D%27none%27%20stroke%3D%27%230E0D0D%27%20stroke-width%3D%272%27/%3E%3C/svg%3E") 23 23, pointer`, CUR_R = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2746%27%20height%3D%2746%27%20viewBox%3D%270%200%2046%2046%27%3E%3Cpolyline%20points%3D%2719%2013%2031%2023%2019%2033%27%20fill%3D%27none%27%20stroke%3D%27%230E0D0D%27%20stroke-width%3D%272%27/%3E%3C/svg%3E") 23 23, pointer`;
+  const CUR_L = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2732%27%20height%3D%2723%27%20viewBox%3D%270%200%20180.29%20129.05%27%3E%3Cg%20transform%3D%27translate%28180.29%2C0%29%20scale%28-1%2C1%29%27%3E%3Cpath%20d%3D%27M178.6%2C60.72l-.73-.69L114.53%2C0l-5.21%2C6.17%2C56.95%2C54.02-166.28.02v8.5l166.02.03-56.75%2C54.09%2C5.25%2C6.23%2C63.29-60.1c2.2-1.94%2C2.49-3.35%2C2.48-4.48%2C0-1.42-.51-2.57-1.67-3.75h-.02Z%27%20fill%3D%27%230E0D0D%27/%3E%3C/g%3E%3C/svg%3E") 16 11, pointer`, CUR_R = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2732%27%20height%3D%2723%27%20viewBox%3D%270%200%20180.29%20129.05%27%3E%3Cpath%20d%3D%27M178.6%2C60.72l-.73-.69L114.53%2C0l-5.21%2C6.17%2C56.95%2C54.02-166.28.02v8.5l166.02.03-56.75%2C54.09%2C5.25%2C6.23%2C63.29-60.1c2.2-1.94%2C2.49-3.35%2C2.48-4.48%2C0-1.42-.51-2.57-1.67-3.75h-.02Z%27%20fill%3D%27%230E0D0D%27/%3E%3C/svg%3E") 16 11, pointer`;
   const PLAY = '<svg viewBox="0 0 24 24"><polygon points="7 5 19 12 7 19"/></svg>';
   const PAUSE = '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>';
   const isVideo = (m) => m && m.type && m.type.startsWith("video");
@@ -160,8 +169,14 @@
 
   /* ---- LAYOUT: balanced rows, gap-justified to fill width (no central void) ---- */
   const TARGET_ROW_W = 2000;
-  const HGAP = 208, VGAP = 204, JIT = 24;
-  const SHORT_SIDE = 270;   // horizontal height == vertical width
+  // canvas spacing differs by device: desktop keeps the original airy layout; laptop/phone tighten
+  function spacingFor(w) {
+    if (w >= 1800) return { h:282, v:276, j:24, s:270 };  // desktop (airy)
+    if (w >= 768)  return { h:184, v:190, j:18, s:256 };  // laptop
+    return { h:96, v:104, j:14, s:230 };                  // phone
+  }
+  let _sp = spacingFor(innerWidth);
+  let HGAP = _sp.h, VGAP = _sp.v, JIT = _sp.j, SHORT_SIDE = _sp.s;
   function sizeFor(p) {
     let a = Math.min(Math.max(aspectOf(p.thumb, 1), 0.62), 1.85);
     // horizontals: fixed height; verticals: fixed width (== horizontal height) so verticals scale up
@@ -205,18 +220,22 @@
     });
     return { w: Math.round(tileW), h: Math.round(y) };
   }
-  const TILE = layout();
-  const PITCHX = TILE.w + HGAP, PITCHY = TILE.h;
+  let TILE = layout();
+  let PITCHX = TILE.w + HGAP, PITCHY = TILE.h;
 
+  const liveVids = new Set();
   const videoObserver = new IntersectionObserver((es) => {
-    es.forEach(e => { const v = e.target; if (e.isIntersecting) v.play().catch(()=>{}); else v.pause(); });
+    es.forEach(e => { const v = e.target;
+      if (e.isIntersecting) { liveVids.add(v); if (!streakOn) v.play().catch(()=>{}); }
+      else { liveVids.delete(v); v.pause(); }
+    });
   }, { rootMargin: "300px", threshold: 0.01 });
 
   const canvas = document.getElementById("canvas");
   const renderedTiles = new Set();
   function mediaEl(m) {
     if (!m) return '<div style="width:100%;height:100%;background:transparent"></div>';
-    if (isVideo(m)) return `<video src="${m.file}" autoplay loop muted playsinline preload="auto" webkit-playsinline></video>`;
+    if (isVideo(m)) return `<video src="${m.file}" autoplay loop muted playsinline preload="none" webkit-playsinline></video>`;
     return `<img src="${m.file}" alt="" loading="lazy" decoding="async">`;
   }
   let introMode = true, introIdx = 0;
@@ -225,6 +244,7 @@
     wrap.className = "card-wrap";
     wrap.style.left = (p._pos.x + col * PITCHX) + "px";
     wrap.style.top  = (p._pos.y + rowT * PITCHY) + "px";
+    wrap._p = p; wrap._col = col; wrap._row = rowT;
     wrap.innerHTML = `<div class="card" style="width:${p._pos.w}px;height:${p._pos.h}px;">${mediaEl(p.thumb)}</div>`;
     const cardEl = wrap.querySelector(".card");
     if (introMode) { cardEl.classList.add("intro"); cardEl.style.animationDelay = Math.min(introIdx * 0.03, 0.6) + "s"; introIdx++; }
@@ -278,13 +298,32 @@
           let dy = Math.max(-MAXOFF, Math.min(MAXOFF, -sdy * (i + 1) * GAIN));
           sOff[i].setAttribute("dx", dx.toFixed(1)); sOff[i].setAttribute("dy", dy.toFixed(1));
         }
-        if (!streakOn) { viewport.style.filter = "url(#streak)"; streakOn = true; }
-      } else if (streakOn) { viewport.style.filter = "none"; streakOn = false; }
+        if (!streakOn) { viewport.style.filter = "url(#streak)"; streakOn = true; liveVids.forEach(v => v.pause()); }
+      } else if (streakOn) { viewport.style.filter = "none"; streakOn = false; liveVids.forEach(v => v.play().catch(()=>{})); }
     }
     ensureTilesAroundView();
     requestAnimationFrame(tick);
   }
   ensureTilesAroundView(); introMode = false; requestAnimationFrame(tick);
+
+  // re-tile with new spacing when the viewport crosses a device breakpoint
+  const tierOf = (w) => w >= 1800 ? "d" : w >= 768 ? "l" : "p";
+  let _tier = tierOf(innerWidth);
+  addEventListener("resize", () => {
+    const t = tierOf(innerWidth);
+    if (t === _tier) return;
+    _tier = t;
+    const sp = spacingFor(innerWidth); HGAP = sp.h; VGAP = sp.v; JIT = sp.j; SHORT_SIDE = sp.s;
+    TILE = layout(); PITCHX = TILE.w + HGAP; PITCHY = TILE.h;
+    canvas.querySelectorAll(".card-wrap").forEach(wrap => {            // glide existing cards to new spots
+      const p = wrap._p;
+      wrap.style.left = (p._pos.x + wrap._col * PITCHX) + "px";
+      wrap.style.top  = (p._pos.y + wrap._row * PITCHY) + "px";
+      const c = wrap.querySelector(".card");
+      if (c) { c.style.width = p._pos.w + "px"; c.style.height = p._pos.h + "px"; }
+    });
+    ensureTilesAroundView();
+  });
 
   function startDrag(x, y) {
     isDragging = true; viewport.classList.add("dragging");
@@ -336,7 +375,8 @@
     capName.textContent = p.name;
     capDesc.textContent = p.copy || "";
     capClient.textContent = p.client ? ("Client — " + p.client) : "";
-    strip.scrollLeft = 0;
+    strip.scrollLeft = 0; strip.scrollTop = 0;
+    const _cap = show.querySelector(".show-caption"); if (_cap) { _cap.classList.remove("tuck"); _cap.style.marginTop = ""; }
     capNum.textContent = single ? "" : ("01 / " + String(showCount).padStart(2, "0"));
     strip.classList.toggle("single", single);
     strip.style.cursor = single ? "default" : "";
@@ -356,6 +396,16 @@
     else strip.scrollBy({ left: dir * strip.clientWidth * 0.8, behavior: "smooth" });
   }
   strip.addEventListener("scroll", updateNum, { passive: true });
+  // mobile: copy slides up as you scroll down through images, slides back on scroll up
+  let _lastSt = 0;
+  strip.addEventListener("scroll", () => {
+    if (innerWidth > 768) return;
+    const cap = show.querySelector(".show-caption"); if (!cap) return;
+    const st = strip.scrollTop;
+    if (st > _lastSt + 4 && st > 36) { if (!cap.classList.contains("tuck")) { cap.style.marginTop = (-cap.offsetHeight) + "px"; cap.classList.add("tuck"); } }
+    else if (st < _lastSt - 4 || st < 18) { if (cap.classList.contains("tuck")) { cap.classList.remove("tuck"); cap.style.marginTop = ""; } }
+    _lastSt = st;
+  }, { passive: true });
   strip.addEventListener("mousemove", e => {
     if (single || e.target.closest(".vtoggle")) { if (!single) strip.style.cursor = ""; return; }
     const r = strip.getBoundingClientRect();
@@ -375,9 +425,9 @@
 
   /* ---- ABOUT ---- */
   const about = document.getElementById("about");
-  document.getElementById("aboutBtn").addEventListener("click", () => about.classList.add("active"));
+  document.getElementById("aboutBtn").addEventListener("click", () => { about.classList.add("active"); document.body.classList.add("about-open"); });
   document.getElementById("aboutBtn").addEventListener("mousedown", e => e.stopPropagation());
-  function closeAbout() { about.classList.add("closing"); about.classList.remove("active"); setTimeout(()=>about.classList.remove("closing"), 320); }
+  function closeAbout() { about.classList.add("closing"); about.classList.remove("active"); document.body.classList.remove("about-open"); setTimeout(()=>about.classList.remove("closing"), 320); }
   window.closeAbout = closeAbout;
 
   addEventListener("keydown", e => {
