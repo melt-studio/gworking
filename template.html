@@ -159,7 +159,7 @@
   function jit(seed) { let h = 2166136261; for (let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);} return ((h>>>0)%1000)/1000*2-1; }
 
   /* ---- LAYOUT: balanced rows, gap-justified to fill width (no central void) ---- */
-  const TARGET_ROW_W = 2000;
+  const TARGET_ROW_W = 2600;
   // canvas spacing differs by device: desktop keeps the original airy layout; laptop/phone tighten
   function spacingFor(w) {
     if (w >= 1800) return { h:300, v:296, j:24, s:415 };  // desktop  (s = uniform row height)
@@ -197,7 +197,7 @@
     rows.forEach((r, ri) => {
       const bandH = Math.max(...r.map(p => p._s.h));
       // gap-justify: spread leftover space into the gaps so each row fills tileW (capped)
-      const extra = r.length > 1 ? Math.min((tileW - rowW[ri]) / (r.length - 1), HGAP * 0.35) : 0;
+      const extra = r.length > 1 ? Math.min((tileW - rowW[ri]) / (r.length - 1), HGAP * 0.3) : 0;
       const gap = HGAP + Math.max(0, extra);
       let x = (tileW - (rowW[ri] + (gap - HGAP) * (r.length - 1))) / 2;
       r.forEach(p => {
@@ -254,14 +254,16 @@
   function ensureTilesAroundView() {
     const cx = (-canvasX + innerWidth / 2) / scale, cy = (-canvasY + innerHeight / 2) / scale;
     const cCol = Math.floor(cx / PITCHX), cRow = Math.floor(cy / PITCHY);
-    const rc = introActive ? Math.ceil((innerWidth / scale / 2) / PITCHX) + 1 : 1;
-    const rr = introActive ? Math.ceil((innerHeight / scale / 2) / PITCHY) + 1 : 1;
+    const rc = introActive ? Math.max(1, Math.ceil((innerWidth / scale / 2) / PITCHX)) : 1;
+    const rr = introActive ? Math.max(1, Math.ceil((innerHeight / scale / 2) / PITCHY)) : 1;
     for (let dc = -rc; dc <= rc; dc++) for (let dr = -rr; dr <= rr; dr++) renderTile(cCol + dc, cRow + dr);
   }
 
   /* ---- DRAG: crisp 1:1 while held, smooth drift on release ---- */
   const viewport = document.getElementById("viewport");
-  let targetX = 80, targetY = 120;
+  const _first = PROJECTS[0]._pos;
+  let targetX = Math.round(innerWidth / 2 - (_first.x + _first.w / 2));   // first project centered
+  let targetY = Math.round(150 - _first.y);                              // a bit below the heading line
   let canvasX = targetX, canvasY = targetY;
   let isDragging = false, startX = 0, startY = 0, dragStartX = 0, dragStartY = 0, dragDistance = 0;
   let velocityX = 0, velocityY = 0, lastX = 0, lastY = 0, lastT = 0;
