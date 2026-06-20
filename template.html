@@ -162,8 +162,8 @@
   const TARGET_ROW_W = 2000;
   // canvas spacing differs by device: desktop keeps the original airy layout; laptop/phone tighten
   function spacingFor(w) {
-    if (w >= 1800) return { h:326, v:320, j:24, s:361 };  // desktop  (s = uniform row height)
-    if (w >= 768)  return { h:220, v:226, j:18, s:322 };  // laptop
+    if (w >= 1800) return { h:300, v:296, j:24, s:415 };  // desktop  (s = uniform row height)
+    if (w >= 768)  return { h:200, v:206, j:18, s:415 };  // laptop
     return { h:96, v:104, j:14, s:306 };                  // phone
   }
   let _sp = spacingFor(innerWidth);
@@ -197,7 +197,7 @@
     rows.forEach((r, ri) => {
       const bandH = Math.max(...r.map(p => p._s.h));
       // gap-justify: spread leftover space into the gaps so each row fills tileW (capped)
-      const extra = r.length > 1 ? Math.min((tileW - rowW[ri]) / (r.length - 1), HGAP * 0.9) : 0;
+      const extra = r.length > 1 ? Math.min((tileW - rowW[ri]) / (r.length - 1), HGAP * 0.35) : 0;
       const gap = HGAP + Math.max(0, extra);
       let x = (tileW - (rowW[ri] + (gap - HGAP) * (r.length - 1))) / 2;
       r.forEach(p => {
