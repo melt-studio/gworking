@@ -30,6 +30,8 @@
   .card:hover { transform:scale(1.08); }
   @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:none; } }
   .card img, .card video { width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; background:transparent; }
+  .card img { opacity:0; transition:opacity .4s var(--easein); }
+  .card img.ld { opacity:1; }
 
   .hud { position:fixed; z-index:10; font-size:12px; letter-spacing:var(--tracking); line-height:1.4; color:var(--fg); }
   .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; }
@@ -228,10 +230,10 @@
   function mediaEl(m) {
     if (!m) return '<div style="width:100%;height:100%;background:transparent"></div>';
     if (isVideo(m)) {
-      if (innerWidth <= 768) return `<img src="${m.poster || m.file}" alt="" loading="lazy" decoding="async">`;  // mobile: static poster, no video element
+      if (innerWidth <= 768) return `<img src="${m.poster || m.file}" alt="" loading="lazy" decoding="async" onload="this.classList.add('ld')">`;  // mobile: static poster
       return `<video src="${m.file}" autoplay loop muted playsinline preload="none" webkit-playsinline${m.poster ? ` poster="${m.poster}"` : ""}></video>`;
     }
-    return `<img src="${m.file}" alt="" loading="lazy" decoding="async">`;
+    return `<img src="${m.file}" alt="" loading="lazy" decoding="async" onload="this.classList.add('ld')">`;
   }
   function buildCard(p, col, rowT) {
     const wrap = document.createElement("div");
@@ -240,6 +242,7 @@
     wrap.style.top  = (p._pos.y + rowT * PITCHY) + "px";
     wrap._p = p; wrap._col = col; wrap._row = rowT;
     wrap.innerHTML = `<div class="card" style="width:${p._pos.w}px;height:${p._pos.h}px;">${mediaEl(p.thumb)}</div>`;
+    wrap.querySelectorAll("img").forEach(im => { if (im.complete && im.naturalWidth) im.classList.add("ld"); });
     const cardEl = wrap.querySelector(".card");
     cardEl.addEventListener("click", () => { if (dragDistance < 5) openShow(p); });
     const v = wrap.querySelector("video"); if (v) { v.muted = true; videoObserver.observe(v); }
@@ -262,8 +265,8 @@
   /* ---- DRAG: crisp 1:1 while held, smooth drift on release ---- */
   const viewport = document.getElementById("viewport");
   const _first = PROJECTS[0]._pos;
-  let targetX = Math.round(34 - _first.x);                               // first project left-aligned under the heading copy
-  let targetY = Math.round(150 - _first.y);                              // a bit below the heading line
+  let targetX = Math.round(-70 - _first.x);                              // first project cropped slightly off the left edge
+  let targetY = Math.round(-45 - _first.y);                              // first row crops at the top edge (hint of more above)
   let canvasX = targetX, canvasY = targetY;
   let isDragging = false, startX = 0, startY = 0, dragStartX = 0, dragStartY = 0, dragDistance = 0;
   let velocityX = 0, velocityY = 0, lastX = 0, lastY = 0, lastT = 0;
@@ -339,7 +342,7 @@
     let pending = urls.size;
     if (!pending) return startReveal();
     urls.forEach(u => { const im = new Image(); im.onload = im.onerror = () => { if (--pending <= 0) startReveal(); }; im.src = u; });
-    setTimeout(startReveal, 2600);             // safety: never hang on a stalled asset
+    setTimeout(startReveal, 1000);             // reveal promptly even on a cold cache; thumbnails fade in as they load
   }
   ensureTilesAroundView(); requestAnimationFrame(tick); if (introActive) preloadThumbs();
 
