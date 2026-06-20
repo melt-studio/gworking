@@ -162,9 +162,9 @@
   const TARGET_ROW_W = 2000;
   // canvas spacing differs by device: desktop keeps the original airy layout; laptop/phone tighten
   function spacingFor(w) {
-    if (w >= 1800) return { h:282, v:276, j:24, s:400 };  // desktop  (s = uniform row height)
-    if (w >= 768)  return { h:184, v:190, j:18, s:378 };  // laptop
-    return { h:96, v:104, j:14, s:340 };                  // phone
+    if (w >= 1800) return { h:282, v:276, j:24, s:380 };  // desktop  (s = uniform row height)
+    if (w >= 768)  return { h:184, v:190, j:18, s:360 };  // laptop
+    return { h:96, v:104, j:14, s:322 };                  // phone
   }
   let _sp = spacingFor(innerWidth);
   let HGAP = _sp.h, VGAP = _sp.v, JIT = _sp.j, SHORT_SIDE = _sp.s;
