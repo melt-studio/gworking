@@ -159,12 +159,12 @@
   function jit(seed) { let h = 2166136261; for (let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);} return ((h>>>0)%1000)/1000*2-1; }
 
   /* ---- LAYOUT: balanced rows, gap-justified to fill width (no central void) ---- */
-  const TARGET_ROW_W = 2600;
+  const TARGET_ROW_W = 3000;
   // canvas spacing differs by device: desktop keeps the original airy layout; laptop/phone tighten
   function spacingFor(w) {
-    if (w >= 1800) return { h:300, v:296, j:24, s:415 };  // desktop  (s = uniform row height)
-    if (w >= 768)  return { h:200, v:206, j:18, s:415 };  // laptop
-    return { h:96, v:104, j:14, s:306 };                  // phone
+    if (w >= 1800) return { h:300, v:296, j:30, s:415 };  // desktop  (s = uniform row height)
+    if (w >= 768)  return { h:200, v:206, j:22, s:415 };  // laptop
+    return { h:96, v:104, j:16, s:306 };                  // phone
   }
   let _sp = spacingFor(innerWidth);
   let HGAP = _sp.h, VGAP = _sp.v, JIT = _sp.j, SHORT_SIDE = _sp.s;
@@ -197,7 +197,7 @@
     rows.forEach((r, ri) => {
       const bandH = Math.max(...r.map(p => p._s.h));
       // gap-justify: spread leftover space into the gaps so each row fills tileW (capped)
-      const extra = r.length > 1 ? Math.min((tileW - rowW[ri]) / (r.length - 1), HGAP * 0.3) : 0;
+      const extra = r.length > 1 ? Math.min((tileW - rowW[ri]) / (r.length - 1), HGAP * 0.55) : 0;
       const gap = HGAP + Math.max(0, extra);
       let x = (tileW - (rowW[ri] + (gap - HGAP) * (r.length - 1))) / 2;
       r.forEach(p => {
