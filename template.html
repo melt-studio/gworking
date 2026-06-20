@@ -262,7 +262,7 @@
   /* ---- DRAG: crisp 1:1 while held, smooth drift on release ---- */
   const viewport = document.getElementById("viewport");
   const _first = PROJECTS[0]._pos;
-  let targetX = Math.round(innerWidth / 2 - (_first.x + _first.w / 2));   // first project centered
+  let targetX = Math.round(34 - _first.x);                               // first project left-aligned under the heading copy
   let targetY = Math.round(150 - _first.y);                              // a bit below the heading line
   let canvasX = targetX, canvasY = targetY;
   let isDragging = false, startX = 0, startY = 0, dragStartX = 0, dragStartY = 0, dragDistance = 0;
