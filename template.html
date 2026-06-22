@@ -123,7 +123,6 @@
 <body>
 
 <div class="viewport" id="viewport"><div class="canvas" id="canvas"></div></div>
-<svg class="mb-defs" width="0" height="0" aria-hidden="true" style="position:absolute"><filter id="mblur" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB"><feGaussianBlur id="mbg" in="SourceGraphic" stdDeviation="0 0"/></filter></svg>
 
 <div class="hud hud-tl">GREG ZADROZNY IS A CREATIVE DIRECTOR</div>
 <div class="hud hud-tr"><span class="uline" id="aboutBtn">ABOUT</span></div>
@@ -220,7 +219,7 @@
   const liveVids = new Set();
   const videoObserver = new IntersectionObserver((es) => {
     es.forEach(e => { const v = e.target;
-      if (e.isIntersecting) { liveVids.add(v); if (!streakOn && !introActive) v.play().catch(()=>{}); }
+      if (e.isIntersecting) { liveVids.add(v); if (!introActive) v.play().catch(()=>{}); }
       else { liveVids.delete(v); v.pause(); }
     });
   }, { rootMargin: "300px", threshold: 0.01 });
@@ -273,8 +272,6 @@
   const FOLLOW = 0.12, FRICTION = 0.95, VMAX = 26;
   const clamp = (v) => Math.max(-VMAX, Math.min(VMAX, v));
 
-  const mbg = document.getElementById("mbg");
-  let streakOn = false, sdx = 0, sdy = 0, prevCX = canvasX, prevCY = canvasY;
   function pruneTiles() {                    // after the wide intro, drop the far-off tiles (frees video elements)
     const cx = (-canvasX + innerWidth / 2) / scale, cy = (-canvasY + innerHeight / 2) / scale;
     const cCol = Math.floor(cx / PITCHX), cRow = Math.floor(cy / PITCHY);
@@ -312,18 +309,6 @@
       canvasY += (targetY - canvasY) * FOLLOW;
     }
     canvas.style.transform = `translate3d(${canvasX.toFixed(1)}px, ${canvasY.toFixed(1)}px, 0) scale(${scale.toFixed(4)})`;
-    // directional motion blur scaled by on-screen speed (desktop only)
-    const ddx = canvasX - prevCX, ddy = canvasY - prevCY; prevCX = canvasX; prevCY = canvasY;
-    if (innerWidth > 820 && !introActive) {
-      // smoothed, directional motion blur (single pass -> smooth on live)
-      sdx += (ddx - sdx) * 0.35; sdy += (ddy - sdy) * 0.35;
-      let bx = Math.min(Math.abs(sdx) * 0.5, 6), by = Math.min(Math.abs(sdy) * 0.5, 6);
-      if (bx >= by) by *= 0.25; else bx *= 0.25;          // keep it directional
-      if (bx + by > 0.4) {
-        mbg.setAttribute("stdDeviation", bx.toFixed(2) + " " + by.toFixed(2));
-        if (!streakOn) { viewport.style.filter = "url(#mblur)"; streakOn = true; liveVids.forEach(v => v.pause()); }
-      } else if (streakOn) { viewport.style.filter = "none"; streakOn = false; liveVids.forEach(v => v.play().catch(()=>{})); }
-    }
     ensureTilesAroundView();
     requestAnimationFrame(tick);
   }
