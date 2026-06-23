@@ -173,16 +173,17 @@
   const TARGET_ROW_W = 3000;
   // canvas spacing differs by device: desktop keeps the original airy layout; laptop/phone tighten
   function spacingFor(w) {
-    if (w >= 1800) return { h:300, v:296, j:30, s:415 };  // desktop  (s = uniform row height)
-    if (w >= 768)  return { h:200, v:206, j:22, s:415 };  // laptop
-    return { h:96, v:104, j:16, s:306 };                  // phone
+    if (w >= 1800) return { h:340, v:334, j:30, s:415 };  // desktop  (s = horizontal height)
+    if (w >= 768)  return { h:228, v:234, j:22, s:415 };  // laptop
+    return { h:110, v:118, j:16, s:306 };                  // phone
   }
   let _sp = spacingFor(innerWidth);
   let HGAP = _sp.h, VGAP = _sp.v, JIT = _sp.j, SHORT_SIDE = _sp.s;
   function sizeFor(p) {
     let a = Math.min(Math.max(aspectOf(p.thumb, 1), 0.62), 1.85);
-    // uniform height across ALL thumbnails; width follows the aspect (horizontals run wider)
-    return { a, w: Math.round(SHORT_SIDE * a), h: SHORT_SIDE };
+    // verticals run taller than the horizontals' shared height; width follows the aspect
+    const h = a < 1 ? Math.round(SHORT_SIDE * 1.15) : SHORT_SIDE;
+    return { a, w: Math.round(h * a), h };
   }
   function partition(w, k) {
     const n = w.length, pre = [0];
