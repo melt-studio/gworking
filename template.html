@@ -65,12 +65,19 @@
   .show-strip::-webkit-scrollbar { display:none; }
   .slide { flex:0 0 auto; height:100%; aspect-ratio:var(--aspect,1.5); background:transparent; position:relative; }
   .slide img, .slide video { width:100%; height:100%; object-fit:contain; display:block; }
+  .slide img { opacity:0; transition:opacity .4s var(--easein); }
+  .slide img.ld { opacity:1; }
   .overlay.active .slide { animation: fadeUp .55s var(--easein) backwards; }
   .vtoggle { position:absolute; left:12px; bottom:12px; width:34px; height:34px; border:none; border-radius:50%;
     background:rgba(0,0,0,.45); color:#fff; cursor:pointer; font-size:12px; line-height:34px; text-align:center; padding:0;
     display:flex; align-items:center; justify-content:center; transition:background .2s ease; }
   .vtoggle:hover { background:rgba(0,0,0,.7); }
   .vtoggle svg { width:13px; height:13px; fill:#fff; }
+  .atoggle { position:absolute; left:54px; bottom:12px; width:34px; height:34px; border:none; border-radius:50%;
+    background:rgba(0,0,0,.45); color:#fff; cursor:pointer; padding:0; align-items:center; justify-content:center; display:flex; transition:background .2s ease; }
+  .atoggle[hidden] { display:none; }
+  .atoggle:hover { background:rgba(0,0,0,.7); }
+  .atoggle svg { width:15px; height:15px; fill:#fff; }
 
   .show-caption { flex:0 0 auto; display:flex; justify-content:space-between; align-items:flex-end;
     gap:48px; padding:0 36px 56px 56px; color:var(--fg); font-size:12px; letter-spacing:var(--tracking);
@@ -155,6 +162,9 @@
   const CUR_L = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2732%27%20height%3D%2723%27%20viewBox%3D%270%200%20180.29%20129.05%27%3E%3Cg%20transform%3D%27translate%28180.29%2C0%29%20scale%28-1%2C1%29%27%3E%3Cpath%20d%3D%27M178.6%2C60.72l-.73-.69L114.53%2C0l-5.21%2C6.17%2C56.95%2C54.02-166.28.02v8.5l166.02.03-56.75%2C54.09%2C5.25%2C6.23%2C63.29-60.1c2.2-1.94%2C2.49-3.35%2C2.48-4.48%2C0-1.42-.51-2.57-1.67-3.75h-.02Z%27%20fill%3D%27%230E0D0D%27/%3E%3C/g%3E%3C/svg%3E") 16 11, pointer`, CUR_R = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2732%27%20height%3D%2723%27%20viewBox%3D%270%200%20180.29%20129.05%27%3E%3Cpath%20d%3D%27M178.6%2C60.72l-.73-.69L114.53%2C0l-5.21%2C6.17%2C56.95%2C54.02-166.28.02v8.5l166.02.03-56.75%2C54.09%2C5.25%2C6.23%2C63.29-60.1c2.2-1.94%2C2.49-3.35%2C2.48-4.48%2C0-1.42-.51-2.57-1.67-3.75h-.02Z%27%20fill%3D%27%230E0D0D%27/%3E%3C/svg%3E") 16 11, pointer`;
   const PLAY = '<svg viewBox="0 0 24 24"><polygon points="7 5 19 12 7 19"/></svg>';
   const PAUSE = '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>';
+  const SND_OFF = '<svg viewBox="0 0 24 24"><polygon points="3 9 3 15 7 15 12 19 12 5 7 9"/><line x1="16" y1="9" x2="22" y2="15" stroke="#fff" stroke-width="2"/><line x1="22" y1="9" x2="16" y2="15" stroke="#fff" stroke-width="2"/></svg>';
+  const SND_ON  = '<svg viewBox="0 0 24 24"><polygon points="3 9 3 15 7 15 12 19 12 5 7 9"/><path d="M16 8.5a5 5 0 0 1 0 7" fill="none" stroke="#fff" stroke-width="2"/></svg>';
+  const hasAudio = (v) => v.mozHasAudio || !!v.webkitAudioDecodedByteCount || !!(v.audioTracks && v.audioTracks.length);
   const isVideo = (m) => m && m.type && m.type.startsWith("video");
   const aspectOf = (m, d) => (m && m.w && m.h) ? m.w / m.h : d;
   function jit(seed) { let h = 2166136261; for (let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);} return ((h>>>0)%1000)/1000*2-1; }
@@ -404,10 +414,17 @@
     strip.innerHTML = media.map(m => {
       const a = aspectOf(m, 1.5);
       const inner = isVideo(m)
-        ? `<video src="${m.file}" autoplay loop muted playsinline${m.poster ? ` poster="${m.poster}"` : ""}></video><button class="vtoggle" aria-label="Play/pause">${PAUSE}</button>`
-        : `<img src="${m.file}" alt="" loading="lazy">`;
+        ? `<video src="${m.file}" autoplay loop muted playsinline${m.poster ? ` poster="${m.poster}"` : ""}></video><button class="vtoggle" aria-label="Play/pause">${PAUSE}</button><button class="atoggle" aria-label="Sound" hidden>${SND_OFF}</button>`
+        : `<img src="${m.file}" alt="" loading="lazy" onload="this.classList.add('ld')">`;
       return `<div class="slide" style="--aspect:${a};">${inner}</div>`;
     }).join("");
+    strip.querySelectorAll("img").forEach(im => { if (im.complete && im.naturalWidth) im.classList.add("ld"); });
+    strip.querySelectorAll(".slide video").forEach(v => {              // reveal the sound button only when the clip actually has audio
+      const aBtn = v.parentElement.querySelector(".atoggle"); if (!aBtn) return;
+      const check = () => { if (hasAudio(v)) aBtn.hidden = false; };
+      v.addEventListener("loadeddata", () => setTimeout(check, 700));
+      v.addEventListener("playing", () => setTimeout(check, 700));
+    });
     capName.textContent = p.name;
     capDesc.textContent = p.copy || "";
     capClient.textContent = p.client ? ("Client — " + p.client) : "";
@@ -445,12 +462,18 @@
     _lastSt = st;
   }, { passive: true });
   strip.addEventListener("mousemove", e => {
-    if (single || e.target.closest(".vtoggle")) { if (!single) strip.style.cursor = ""; return; }
+    if (single || e.target.closest(".vtoggle") || e.target.closest(".atoggle")) { if (!single) strip.style.cursor = ""; return; }
     const r = strip.getBoundingClientRect();
     const left = (e.clientX - r.left) < r.width / 2;
     strip.style.cursor = left ? CUR_L : CUR_R; strip._dir = left ? -1 : 1;
   });
   strip.addEventListener("click", e => {
+    const aTg = e.target.closest(".atoggle");
+    if (aTg) {                                  // toggle sound
+      const v = aTg.parentElement.querySelector("video");
+      v.muted = !v.muted; aTg.innerHTML = v.muted ? SND_OFF : SND_ON;
+      return;
+    }
     const tg = e.target.closest(".vtoggle");
     if (tg) {                                   // targeted play/pause
       const v = tg.parentElement.querySelector("video");
