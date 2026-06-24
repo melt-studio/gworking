@@ -6,6 +6,7 @@ import { execFileSync } from "node:child_process";
 import ffprobe from "@ffprobe-installer/ffprobe";
 import ffmpeg from "@ffmpeg-installer/ffmpeg";
 import sharp from "sharp";
+import crypto from "node:crypto";
 
 // retina-safe ceilings (longest edge, px). Files within these are left untouched.
 const MAX_THUMB = 1200;
@@ -16,6 +17,12 @@ const BASE  = process.env.AIRTABLE_BASE_ID || "appJ5XFh9jxMVKJYA";
 const TABLE = process.env.AIRTABLE_TABLE   || "projects";
 const OUT    = "public";
 const ASSETS = path.join(OUT, "assets", "projects");
+function ver(rel) {                       // content-hash query so a changed asset gets a fresh URL (no stale cache)
+  try {
+    const h = crypto.createHash("md5").update(fs.readFileSync(path.join(OUT, rel))).digest("hex").slice(0, 8);
+    return rel + "?v=" + h;
+  } catch { return rel; }
+}
 
 if (!TOKEN) { console.error("ERROR: set AIRTABLE_TOKEN (Airtable personal access token)."); process.exit(1); }
 
@@ -124,8 +131,9 @@ for (const rec of records) {
       poster = posterFor(dest, w, h);
     }
     else if (maxEdge) { const d = await optimizeImage(dest, maxEdge); if (d) { w = d.width; h = d.height; } }
-    const out = { file: path.relative(OUT, dest).split(path.sep).join("/"), type, w, h };
-    if (poster) out.poster = poster;
+    const rel = path.relative(OUT, dest).split(path.sep).join("/");
+    const out = { file: ver(rel), type, w, h };
+    if (poster) out.poster = ver(poster);
     return out;
   }
 
