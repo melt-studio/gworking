@@ -296,8 +296,8 @@
     if (!introActive) return;
     introActive = false; introReady = true; scale = 1; canvasX = targetX; canvasY = targetY;
     canvas.style.opacity = "1";
-    pruneTiles();
-    liveVids.forEach(v => v.play().catch(()=>{}));
+    // defer the heavy work (DOM prune + starting videos) so it can't hitch the final zoom frame
+    setTimeout(() => { pruneTiles(); liveVids.forEach(v => v.play().catch(()=>{})); }, 160);
   }
   function tick(now) {
     if (introActive) {
