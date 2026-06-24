@@ -52,11 +52,24 @@ async function fetchAll() {
   return records;
 }
 
-async function download(url, dest) {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error(`download ${r.status} for ${url}`);
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.writeFileSync(dest, Buffer.from(await r.arrayBuffer()));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// Airtable attachment URLs are temporary and occasionally 4xx/5xx; retry with backoff
+async function download(url, dest, tries = 4) {
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error(`download ${r.status} for ${url}`);
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.writeFileSync(dest, Buffer.from(await r.arrayBuffer()));
+      return;
+    } catch (e) {
+      lastErr = e;
+      if (i < tries - 1) await sleep(500 * (i + 1));   // 0.5s, 1s, 1.5s
+    }
+  }
+  throw lastErr;
 }
 
 // videos can have non-square pixels; use the DISPLAY aspect, not the coded size
@@ -111,6 +124,7 @@ async function optimizeImage(file, maxEdge) {
 
 const records = await fetchAll();
 let about = "";
+let failures = 0;
 const projects = [];
 
 for (const rec of records) {
@@ -137,10 +151,22 @@ for (const rec of records) {
     return out;
   }
 
+  // never let a single flaky attachment kill the whole deploy — skip it and keep going
+  async function safeMedia(att, fname, maxEdge) {
+    try { return await media(att, fname, maxEdge); }
+    catch (e) { console.warn(`  SKIP ${slug}/${fname}: ${e.message}`); failures++; return null; }
+  }
+
   const th = f[F.thumb] || [], imgs = f[F.imgs] || [];
-  const thumb = th[0] ? await media(th[0], "thumbnail" + extFor(th[0]), MAX_THUMB) : null;
+  const thumb = th[0] ? await safeMedia(th[0], "thumbnail" + extFor(th[0]), MAX_THUMB) : null;
   const slides = [];
-  for (let i = 0; i < imgs.length; i++) slides.push(await media(imgs[i], String(i+1).padStart(2,"0") + extFor(imgs[i]), MAX_SLIDE));
+  for (let i = 0; i < imgs.length; i++) {
+    const s = await safeMedia(imgs[i], String(i+1).padStart(2,"0") + extFor(imgs[i]), MAX_SLIDE);
+    if (s) slides.push(s);
+  }
+
+  // a project with no usable thumbnail can't be tiled on the canvas — drop it
+  if (!thumb) { console.warn(`  DROP ${slug}: no thumbnail`); continue; }
 
   projects.push({ name: f[F.name], slug, client: f[F.client] || "", copy: f[F.copy] || "", thumb, slides, gallery: [] });
   console.log(`  ${slug}: thumb ${thumb?1:0}, slides ${slides.length}`);
@@ -169,3 +195,6 @@ if (fs.existsSync(FAV_SRC)) {
 
 fs.writeFileSync(path.join(OUT, "index.html"), html);
 console.log(`\nBuilt ${projects.length} projects -> ${OUT}/index.html`);
+if (failures) console.warn(`  (${failures} attachment(s) skipped after retries)`);
+// guard against a totally empty build (e.g. Airtable outage) overwriting a good site
+if (projects.length === 0) { console.error("ERROR: no projects built — refusing to publish empty site."); process.exit(1); }
