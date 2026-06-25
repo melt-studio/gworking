@@ -2,3 +2,6 @@ node_modules/
 public/
 .DS_Store
 .vercel
+
+# stray Airtable exports / CSVs (keep out of the published repo)
+*_collaborators_*.csv

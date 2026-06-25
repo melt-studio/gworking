@@ -174,7 +174,7 @@
   // canvas spacing differs by device: desktop keeps the original airy layout; laptop/phone tighten
   function spacingFor(w) {
     if (w >= 1800) return { h:380, v:374, j:30, s:415 };  // desktop  (s = horizontal height)
-    if (w >= 768)  return { h:256, v:262, j:22, s:415 };  // laptop
+    if (w >= 768)  return { h:200, v:140, j:20, s:250 };  // laptop
     return { h:124, v:132, j:16, s:306 };                  // phone
   }
   let _sp = spacingFor(innerWidth);
