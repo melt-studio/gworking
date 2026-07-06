@@ -125,6 +125,7 @@
     .show-caption .num { display:none; }
     .about-inner { max-width:none; padding:88px 24px 48px; font-size:11px; }
   }
+  @media (min-width:769px) and (max-width:1799px) { .hud { font-size:11px; } }  /* laptop: 1px smaller HUD text */
 </style>
 </head>
 <body>
@@ -159,6 +160,15 @@
 
 <script>
   const PROJECTS = __PAYLOAD__;
+  // Keep the first LOCK_COUNT projects in Airtable order (stable opening screen);
+  // reshuffle everything after them on every page load so the canvas feels fresh.
+  const LOCK_COUNT = 6;
+  (function shuffleTail() {
+    for (let i = PROJECTS.length - 1; i > LOCK_COUNT; i--) {
+      const j = LOCK_COUNT + Math.floor(Math.random() * (i - LOCK_COUNT + 1));
+      [PROJECTS[i], PROJECTS[j]] = [PROJECTS[j], PROJECTS[i]];
+    }
+  })();
   const CUR_L = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2732%27%20height%3D%2723%27%20viewBox%3D%270%200%20180.29%20129.05%27%3E%3Cg%20transform%3D%27translate%28180.29%2C0%29%20scale%28-1%2C1%29%27%3E%3Cpath%20d%3D%27M178.6%2C60.72l-.73-.69L114.53%2C0l-5.21%2C6.17%2C56.95%2C54.02-166.28.02v8.5l166.02.03-56.75%2C54.09%2C5.25%2C6.23%2C63.29-60.1c2.2-1.94%2C2.49-3.35%2C2.48-4.48%2C0-1.42-.51-2.57-1.67-3.75h-.02Z%27%20fill%3D%27%230E0D0D%27/%3E%3C/g%3E%3C/svg%3E") 16 11, pointer`, CUR_R = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2732%27%20height%3D%2723%27%20viewBox%3D%270%200%20180.29%20129.05%27%3E%3Cpath%20d%3D%27M178.6%2C60.72l-.73-.69L114.53%2C0l-5.21%2C6.17%2C56.95%2C54.02-166.28.02v8.5l166.02.03-56.75%2C54.09%2C5.25%2C6.23%2C63.29-60.1c2.2-1.94%2C2.49-3.35%2C2.48-4.48%2C0-1.42-.51-2.57-1.67-3.75h-.02Z%27%20fill%3D%27%230E0D0D%27/%3E%3C/svg%3E") 16 11, pointer`;
   const PLAY = '<svg viewBox="0 0 24 24"><polygon points="7 5 19 12 7 19"/></svg>';
   const PAUSE = '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>';
@@ -174,7 +184,7 @@
   // canvas spacing differs by device: desktop keeps the original airy layout; laptop/phone tighten
   function spacingFor(w) {
     if (w >= 1800) return { h:380, v:374, j:30, s:415 };  // desktop  (s = horizontal height)
-    if (w >= 768)  return { h:200, v:140, j:20, s:250 };  // laptop
+    if (w >= 768)  return { h:150, v:120, j:20, s:300 };  // laptop — bigger images, tighter padding
     return { h:124, v:132, j:16, s:306 };                  // phone
   }
   let _sp = spacingFor(innerWidth);
@@ -197,21 +207,26 @@
     while (j > 1) { const x = P[i][j]; cuts.unshift(x); i = x; j--; }
     const r = []; let s = 0; for (const c of cuts) { r.push([s, c]); s = c; } r.push([s, n]); return r;
   }
-  function layout() {
-    PROJECTS.forEach(p => { p._s = sizeFor(p); });
-    const N = PROJECTS.length;
-    const sumW = PROJECTS.reduce((s, p) => s + p._s.w + HGAP, 0);
-    const rowCount = Math.max(1, Math.min(N, Math.round(sumW / (TARGET_ROW_W + HGAP))));
-    const rows = partition(PROJECTS.map(p => p._s.w + HGAP), rowCount).map(([a, b]) => PROJECTS.slice(a, b));
-    const rowW = rows.map(r => r.reduce((s, p) => s + p._s.w, 0) + (r.length - 1) * HGAP);
-    const tileW = Math.max(...rowW);
-    let y = 0;
-    rows.forEach((r, ri) => {
+  const rowWidth = r => r.reduce((s, p) => s + p._s.w, 0) + (r.length - 1) * HGAP;
+  // partition a sublist into balanced rows (~TARGET_ROW_W each)
+  function rowsFor(list) {
+    if (!list.length) return [];
+    const sumW = list.reduce((s, p) => s + p._s.w + HGAP, 0);
+    const rc = Math.max(1, Math.min(list.length, Math.round(sumW / (TARGET_ROW_W + HGAP))));
+    return partition(list.map(p => p._s.w + HGAP), rc).map(([a, b]) => list.slice(a, b));
+  }
+  // lay out a group of rows; each row is gap-justified to groupTileW (its own zone width, so
+  // the locked head's internal spacing never depends on the shuffled tail), then the justified
+  // row is centered inside the shared globalTileW. y advances downward; returns the next y.
+  function placeRows(rows, groupTileW, globalTileW, y0) {
+    let y = y0;
+    rows.forEach(r => {
       const bandH = Math.max(...r.map(p => p._s.h));
-      // gap-justify: spread leftover space into the gaps so each row fills tileW (capped)
-      const extra = r.length > 1 ? Math.min((tileW - rowW[ri]) / (r.length - 1), HGAP * 0.55) : 0;
+      const rowW = rowWidth(r);
+      const extra = r.length > 1 ? Math.min((groupTileW - rowW) / (r.length - 1), HGAP * 0.55) : 0;
       const gap = HGAP + Math.max(0, extra);
-      let x = (tileW - (rowW[ri] + (gap - HGAP) * (r.length - 1))) / 2;
+      const justW = rowW + (gap - HGAP) * (r.length - 1);
+      let x = (globalTileW - justW) / 2;
       r.forEach(p => {
         const dx = jit(p.slug + "x") * JIT, dy = jit(p.slug + "y") * JIT;
         p._pos = { x: x + dx, y: y + (bandH - p._s.h) / 2 + dy, w: p._s.w, h: p._s.h };
@@ -219,7 +234,19 @@
       });
       y += bandH + VGAP;
     });
-    return { w: Math.round(tileW), h: Math.round(y) };
+    return y;
+  }
+  function layout() {
+    PROJECTS.forEach(p => { p._s = sizeFor(p); });
+    const lock = Math.min(LOCK_COUNT, PROJECTS.length);
+    const headRows = rowsFor(PROJECTS.slice(0, lock));   // fixed: depends only on the locked head
+    const tailRows = rowsFor(PROJECTS.slice(lock));       // reshuffled each load
+    const headTileW = headRows.length ? Math.max(...headRows.map(rowWidth)) : 0;
+    const tailTileW = tailRows.length ? Math.max(...tailRows.map(rowWidth)) : 0;
+    const globalTileW = Math.max(headTileW, tailTileW, 1);
+    let y = placeRows(headRows, headTileW || globalTileW, globalTileW, 0);
+    y = placeRows(tailRows, tailTileW || globalTileW, globalTileW, y);
+    return { w: Math.round(globalTileW), h: Math.round(y) };
   }
   let TILE = layout();
   let PITCHX = TILE.w + HGAP, PITCHY = TILE.h;
