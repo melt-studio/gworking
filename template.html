@@ -34,12 +34,12 @@
   .card img.ld { opacity:1; }
 
   .hud { position:fixed; z-index:10; font-size:12px; letter-spacing:var(--tracking); line-height:1.4; color:var(--fg); }
-  .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; }
+  .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; z-index:115; }  /* name always on top + clickable */
   .hud-tr { top:30px; right:36px; height:30px; display:flex; align-items:center; }   /* matches X */
   .hud-bl { bottom:24px; left:34px; } .hud-br { bottom:24px; right:36px; text-align:right; }
   .hud-tl, .hud-tr, .hud-bl { animation: fadeUp .7s var(--easein) .5s backwards; }   /* text in after images */
   .hud-tr { transition: opacity .35s var(--easein); }                                /* close: ABOUT fades back fast */
-  body.about-open .hud-tr { opacity:0; pointer-events:none; transition: opacity .7s var(--easein); }  /* open: crossfade w/ X */
+  body.about-open .hud-tl, body.show-open .hud-tl { opacity:0; pointer-events:none; transition: opacity .5s var(--easein); }  /* header only on canvas + list */
 
   .uline { position:relative; cursor:pointer; display:inline-block; color:var(--fg); text-decoration:none; }
   .uline::after { content:""; position:absolute; left:0; bottom:-3px; height:1.5px; width:100%;
@@ -51,11 +51,11 @@
     opacity:0; pointer-events:none; transition:opacity .8s var(--easein);
     display:flex; flex-direction:column; overflow:hidden; }
   .overlay.active { opacity:1; pointer-events:auto; }
-  .overlay.closing { transition:opacity .9s ease; }
-  #about.closing { transition:opacity .3s ease; }
+  .overlay.closing { transition:opacity 1.15s ease; }   /* slightly slower reveal of the canvas on close */
+  #about.closing { transition:opacity .65s ease; }
   .ov-close { position:absolute; top:30px; right:36px; width:30px; height:30px; background:none; border:none; cursor:pointer; z-index:120; display:flex; align-items:center; justify-content:flex-end; padding:0; }
   .ov-close svg { width:20px; height:20px; stroke:var(--fg); stroke-width:2; fill:none; opacity:.85; transition:opacity .2s ease, transform .2s var(--ease); }
-  .ov-close:hover svg { opacity:1; transform:scale(1.15); }
+  .ov-close:hover svg { opacity:1; }
   .overlay.closing .ov-close svg { opacity:0; transition:opacity .12s ease; }
 
   /* ===== PROJECT — FILMSTRIP SLIDESHOW ===== */
@@ -108,8 +108,51 @@
     background:currentColor; transform:scaleX(1); transform-origin:right center; transition:transform .55s var(--easein); }
   .about-inner .a-contact a:hover::after { transform:scaleX(0); }
 
+  /* ===== NAV: name-as-link + hamburger + project index list ===== */
+  .uline-off { position:relative; cursor:pointer; display:inline-block; color:var(--fg); text-decoration:none; }
+  .uline-off::after { content:""; position:absolute; left:0; bottom:-3px; height:1.5px; width:100%;
+    background:currentColor; transform:scaleX(1); transform-origin:right center; transition:transform .55s var(--easein); }
+  .uline-off:hover::after { transform:scaleX(0); }
+
+  .menu-btn { width:20px; height:14px; padding:0; border:none; background:none; cursor:pointer; position:relative; }
+  .menu-btn span { position:absolute; left:0; width:100%; height:1.5px; background:var(--fg);   /* 1.5px = link-underline weight */
+    transition:transform .4s var(--ease), opacity .3s var(--ease); }
+  .menu-btn span:nth-child(1) { top:0; }
+  .menu-btn span:nth-child(2) { top:50%; transform:translateY(-50%); }
+  .menu-btn span:nth-child(3) { bottom:0; }
+  .menu-btn:hover span { opacity:.5; }   /* single clean fade to gray on hover — no scale, matches row hover */
+  /* hamburger morphs into an X whenever ANY overlay is open (site easing) — one consistent close everywhere */
+  body.menu-open .menu-btn span:nth-child(1), body.about-open .menu-btn span:nth-child(1), body.show-open .menu-btn span:nth-child(1) { transform:translateY(6.25px) rotate(45deg); }
+  body.menu-open .menu-btn span:nth-child(2), body.about-open .menu-btn span:nth-child(2), body.show-open .menu-btn span:nth-child(2) { opacity:0; }
+  body.menu-open .menu-btn span:nth-child(3), body.about-open .menu-btn span:nth-child(3), body.show-open .menu-btn span:nth-child(3) { transform:translateY(-6.25px) rotate(-45deg); }
+  body.menu-open .hud-tr, body.about-open .hud-tr, body.show-open .hud-tr { z-index:110; }   /* keep the X above every overlay */
+  body.menu-open .hud-bl { z-index:110; }   /* PROJECTS·2026 stays above the list */
+
+  .menu-inner { width:100%; height:100%; overflow-y:auto; overflow-x:hidden; padding:104px 28px 64px 34px;
+    scrollbar-width:thin; scrollbar-color:var(--fg) transparent; }   /* right 28 + 8px scrollbar = aligns with the X at 36 */
+  .menu-inner::-webkit-scrollbar { width:8px; }
+  .menu-inner::-webkit-scrollbar-track { background:transparent; }
+  .menu-inner::-webkit-scrollbar-thumb { background:var(--fg); border-radius:0; }   /* solid black rectangle */
+  /* opaque bands so rows scroll cleanly under the fixed header/footer labels */
+  .menu-mask { position:absolute; left:0; right:0; background:var(--bg); z-index:105; pointer-events:none; }
+  .menu-mask-top { top:0; height:76px; } .menu-mask-bot { bottom:0; height:56px; }
+  .mrow { display:grid; grid-template-columns:minmax(190px,340px) minmax(100px,180px) minmax(220px,500px) 1fr;
+    align-items:center; gap:28px; padding:16px 2px; border-bottom:1px solid var(--fg);
+    cursor:pointer; color:var(--fg); font-size:12px; letter-spacing:var(--tracking); transition:opacity .2s ease; }
+  .mrow:hover { opacity:.5; }
+  .m-num { text-align:right; white-space:nowrap; }
+  .m-client, .m-note { line-height:1.35; }
+  .m-note { margin-left:22px; }   /* extra breathing room between client and copyOverview */
+  @keyframes fadeDown { from { opacity:1; transform:none; } to { opacity:0; transform:translateY(14px); } }
+  .overlay.active .mrow  { animation:fadeUp   .5s var(--easein) backwards; animation-delay:calc(0.04s + var(--i,0) * 0.035s); }
+  .overlay.closing .mrow { animation:fadeDown .4s var(--easein) forwards;  animation-delay:calc(var(--i,0) * 0.02s); }
+
   @media (max-width:768px) {
     .hud { font-size:11px; }
+    .menu-inner { padding:88px 20px 48px; }
+    .mrow { grid-template-columns:1fr auto; row-gap:6px; column-gap:16px; padding:14px 0; font-size:11px; }
+    .m-name { grid-column:1; } .m-num { grid-column:2; text-align:right; }
+    .m-client { grid-column:1 / -1; opacity:.7; } .m-note { grid-column:1 / -1; opacity:.7; }
     .hud-tl { height:auto; max-width:60vw; line-height:1.35; align-items:flex-start; }
     .hud-tr { align-items:flex-start; height:auto; line-height:1.35; }
     /* slideshow -> vertical stack, copy at top */
@@ -138,12 +181,11 @@
 
 <div class="viewport" id="viewport"><div class="canvas" id="canvas"></div></div>
 
-<div class="hud hud-tl">GREG ZADROZNY IS A CREATIVE DIRECTOR</div>
-<div class="hud hud-tr"><span class="uline" id="aboutBtn">ABOUT</span></div>
+<div class="hud hud-tl"><span class="uline-off" id="aboutBtn">GREG ZADROZNY IS A CREATIVE DIRECTOR</span></div>
+<div class="hud hud-tr"><button class="menu-btn" id="menuBtn" aria-label="Project index"><span></span><span></span><span></span></button></div>
 <div class="hud hud-bl">PROJECTS · 2026</div>
 
 <div class="overlay" id="show">
-  <button class="ov-close" onclick="closeShow()" aria-label="Close"><svg viewBox="0 0 24 24"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg></button>
   <div class="show-strip" id="strip"></div>
   <div class="show-caption">
     <div class="meta">
@@ -156,7 +198,6 @@
 </div>
 
 <div class="overlay" id="about">
-  <button class="ov-close" onclick="closeAbout()" aria-label="Close"><svg viewBox="0 0 24 24"><line x1="4" y1="4" x2="20" y2="20"/><line x1="20" y1="4" x2="4" y2="20"/></svg></button>
   <div class="about-inner">
     <span class="a-name">__ABOUTHEAD__</span>
     __ABOUT__
@@ -164,8 +205,15 @@
   </div>
 </div>
 
+<div class="overlay" id="menu">
+  <div class="menu-mask menu-mask-top"></div>
+  <div class="menu-mask menu-mask-bot"></div>
+  <div class="menu-inner" id="menuList"></div>
+</div>
+
 <script>
   const PROJECTS = __PAYLOAD__;
+  const ORDERED = PROJECTS.slice();   // stable Airtable order, preserved for the index/list view
   // Keep the first LOCK_COUNT projects in Airtable order (stable opening screen);
   // reshuffle everything after them on every page load so the canvas feels fresh.
   const LOCK_COUNT = 6;
@@ -468,12 +516,14 @@
     strip.classList.toggle("single", single);
     strip.style.cursor = single ? "default" : "";
     show.classList.remove("closing"); show.classList.add("active");
+    document.body.classList.add("show-open");
     liveVids.forEach(v => v.pause());
   }
   function closeShow() {
     show.classList.add("closing"); show.classList.remove("active");
+    document.body.classList.remove("show-open");
     liveVids.forEach(v => v.play().catch(()=>{}));
-    setTimeout(() => { show.classList.remove("closing"); strip.innerHTML = ""; }, 900);
+    setTimeout(() => { show.classList.remove("closing"); strip.innerHTML = ""; }, 1150);
   }
   window.closeShow = closeShow;
   function atEnd() { return strip.scrollLeft >= strip.scrollWidth - strip.clientWidth - 4; }
@@ -520,10 +570,60 @@
 
   /* ---- ABOUT ---- */
   const about = document.getElementById("about");
-  document.getElementById("aboutBtn").addEventListener("click", () => { about.classList.add("active"); document.body.classList.add("about-open"); liveVids.forEach(v => v.pause()); });
+  document.getElementById("aboutBtn").addEventListener("click", () => {   // name always opens About, from anywhere
+    if (show.classList.contains("active")) closeShow();
+    if (menu.classList.contains("active")) closeMenu();
+    about.classList.add("active"); document.body.classList.add("about-open"); liveVids.forEach(v => v.pause());
+  });
   document.getElementById("aboutBtn").addEventListener("mousedown", e => e.stopPropagation());
-  function closeAbout() { about.classList.add("closing"); about.classList.remove("active"); document.body.classList.remove("about-open"); liveVids.forEach(v => v.play().catch(()=>{})); setTimeout(()=>about.classList.remove("closing"), 320); }
+  function closeAbout() { about.classList.add("closing"); about.classList.remove("active"); document.body.classList.remove("about-open"); liveVids.forEach(v => v.play().catch(()=>{})); setTimeout(()=>about.classList.remove("closing"), 700); }
   window.closeAbout = closeAbout;
+
+  /* ---- PROJECT INDEX (list view) ---- */
+  const menu = document.getElementById("menu");
+  const menuList = document.getElementById("menuList");
+  const escH = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  function buildMenuRows() {
+    menuList.innerHTML = ORDERED.map((p, i) => {
+      const n = (p.slides && p.slides.length) ? String(p.slides.length).padStart(2, "0") : "";
+      return `<div class="mrow" data-i="${i}" style="--i:${i}">`
+        + `<span class="m-name">${escH(p.name)}</span>`
+        + `<span class="m-client">${escH(p.client || "")}</span>`
+        + `<span class="m-note">${escH(p.overview || "")}</span>`
+        + `<span class="m-num">${n}</span></div>`;
+    }).join("");
+  }
+  function openMenu() {
+    buildMenuRows();
+    menu.classList.remove("closing");
+    void menu.offsetWidth;                     // restart the staggered row entrance each open
+    menu.classList.add("active");
+    document.body.classList.add("menu-open");
+    liveVids.forEach(v => v.pause());
+  }
+  function closeMenu() {
+    menu.classList.add("closing"); menu.classList.remove("active");
+    document.body.classList.remove("menu-open");
+    liveVids.forEach(v => v.play().catch(()=>{}));
+    setTimeout(() => menu.classList.remove("closing"), 1150);
+  }
+  window.closeMenu = closeMenu;
+  const menuBtn = document.getElementById("menuBtn");
+  // top-right button is the single, consistent control: closes whatever overlay is open, else opens the list
+  menuBtn.addEventListener("click", () => {
+    if (show.classList.contains("active")) closeShow();
+    else if (about.classList.contains("active")) closeAbout();
+    else if (menu.classList.contains("active")) closeMenu();
+    else openMenu();
+  });
+  menuBtn.addEventListener("mousedown", e => e.stopPropagation());
+  menuList.addEventListener("click", e => {
+    const row = e.target.closest(".mrow"); if (!row) return;
+    const p = ORDERED[+row.dataset.i];
+    menu.classList.remove("active"); menu.classList.remove("closing");   // hide index instantly, project fades in
+    document.body.classList.remove("menu-open");
+    openShow(p);
+  });
 
   addEventListener("keydown", e => {
     endIntro();
@@ -532,6 +632,7 @@
       else if (e.key === "ArrowRight") scrollStep(1);
       else if (e.key === "ArrowLeft") scrollStep(-1);
     } else if (about.classList.contains("active") && e.key === "Escape") closeAbout();
+    else if (menu.classList.contains("active") && e.key === "Escape") closeMenu();
   });
 </script>
 </body>
