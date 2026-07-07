@@ -376,22 +376,15 @@
   function endIntro() {
     if (!introActive) return;
     introActive = false; introReady = true; scale = 1; canvasX = targetX; canvasY = targetY;
+    canvas.style.transition = "";                                     // hand transform control back to the rAF loop
+    canvas.style.transform = `translate3d(${targetX}px, ${targetY}px, 0) scale(1)`;
     canvas.style.opacity = "1";
-    // defer the heavy work (DOM prune + starting videos) so it can't hitch the final zoom frame
-    setTimeout(() => { pruneTiles(); liveVids.forEach(v => v.play().catch(()=>{})); }, 160);
+    // defer the heavy work (DOM prune + starting videos) so it can't hitch the reveal
+    setTimeout(() => { pruneTiles(); liveVids.forEach(v => v.play().catch(()=>{})); }, 80);
   }
-  function tick(now) {
-    if (introActive) {
-      if (introReady) {                       // thumbnails preloaded -> play the reveal
-        if (!introStart) introStart = now;
-        const t = Math.min(1, (now - introStart) / INTRO_DUR), e = easeIO(t);
-        scale = INTRO_SCALE + (1 - INTRO_SCALE) * e;
-        canvasX = introX0 + (targetX - introX0) * e;
-        canvasY = introY0 + (targetY - introY0) * e;
-        canvas.style.opacity = e.toFixed(3);
-        if (t >= 1) endIntro();
-      }                                        // else: hold the zoomed-out frame, hidden
-    } else if (isDragging) { canvasX = targetX; canvasY = targetY; }
+  function tick() {
+    if (introActive) { requestAnimationFrame(tick); return; }        // CSS transition drives the intro zoom on the GPU
+    if (isDragging) { canvasX = targetX; canvasY = targetY; }
     else {
       targetX += velocityX; targetY += velocityY;
       velocityX *= FRICTION; velocityY *= FRICTION;
@@ -412,7 +405,24 @@
     introX0 = innerWidth / 2 - INTRO_SCALE * pxc; introY0 = innerHeight / 2 - INTRO_SCALE * pyc;
     canvasX = introX0; canvasY = introY0; scale = INTRO_SCALE;
   })();
-  function startReveal() { if (introReady || !introActive) return; introReady = true; introStart = 0; }
+  function startReveal() {                       // GPU/compositor zoom — stays smooth even while thumbnails decode
+    if (introReady || !introActive) return;
+    introReady = true;
+    canvas.style.transition = "none";
+    canvas.style.transform = `translate3d(${introX0}px, ${introY0}px, 0) scale(${INTRO_SCALE})`;
+    canvas.style.opacity = "0";
+    void canvas.offsetWidth;                      // commit the zoomed-out start frame before transitioning
+    canvas.style.transition = `transform ${INTRO_DUR}ms cubic-bezier(0.65,0,0.35,1), opacity 800ms ease`;
+    requestAnimationFrame(() => {                 // next frame: animate to the final framing (compositor-driven)
+      canvas.style.transform = `translate3d(${targetX}px, ${targetY}px, 0) scale(1)`;
+      canvas.style.opacity = "1";
+    });
+    canvas.addEventListener("transitionend", function te(e) {
+      if (e.propertyName !== "transform") return;
+      canvas.removeEventListener("transitionend", te); endIntro();
+    });
+    setTimeout(endIntro, INTRO_DUR + 300);        // safety in case transitionend doesn't fire
+  }
   function preloadThumbs() {                   // wait until every thumbnail image (static + video poster) is ready
     const urls = new Set();
     PROJECTS.forEach(p => { const m = p.thumb; if (!m) return; const u = (isVideo(m) && m.poster) ? m.poster : m.file; if (u) urls.add(u); });
