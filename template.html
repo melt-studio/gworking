@@ -149,12 +149,17 @@
 
   @media (max-width:768px) {
     .hud { font-size:11px; }
-    .menu-inner { padding:88px 20px 48px; }
-    .mrow { grid-template-columns:1fr auto; row-gap:7px; column-gap:16px; padding:18px 0; font-size:11px; }
-    .m-name { grid-column:1; } .m-num { grid-column:2; text-align:right; align-self:start; }
-    .m-client { grid-column:1 / -1; opacity:.7; margin-left:0; } .m-note { grid-column:1 / -1; opacity:.7; margin-left:0; }
-    .hud-tl { height:auto; max-width:60vw; line-height:1.35; align-items:flex-start; }
-    .hud-tr { align-items:flex-start; height:auto; line-height:1.35; }
+    .menu-inner { padding:88px 20px 48px; scrollbar-width:none; }
+    .menu-inner::-webkit-scrollbar { display:none; }   /* mobile: overlay scroll, no gutter -> clean edges */
+    /* two lines: [name | client] then [overview] underneath the title */
+    .mrow { grid-template-columns:1fr auto; column-gap:16px; row-gap:3px; padding:11px 0; font-size:11px; align-items:baseline; }
+    .m-name { grid-column:1; grid-row:1; }
+    .m-client { grid-column:2; grid-row:1; justify-self:end; text-align:right; opacity:.7; margin-left:0; }
+    .m-note { grid-column:1 / -1; grid-row:2; opacity:.7; margin-left:0; }
+    .m-num { display:none; }
+    .hud-tl { left:20px; height:auto; max-width:60vw; line-height:1.35; align-items:flex-start; }
+    .hud-tr { right:20px; align-items:flex-start; height:auto; line-height:1.35; }
+    .hud-bl { left:20px; }
     /* slideshow -> vertical stack, copy at top */
     .show-strip { order:2; flex-direction:column; align-items:stretch; gap:28px;
       overflow-x:hidden; overflow-y:auto; padding:14px 20px 48px; cursor:default !important; }
@@ -239,7 +244,7 @@
   function spacingFor(w) {
     if (w >= 1800) return { h:380, v:374, j:30, s:415 };  // desktop  (s = horizontal height)
     if (w >= 768)  return { h:200, v:140, j:20, s:250 };  // laptop
-    return { h:124, v:132, j:16, s:306 };                  // phone
+    return { h:106, v:112, j:14, s:260 };                  // phone — smaller thumbnails
   }
   let _sp = spacingFor(innerWidth);
   let HGAP = _sp.h, VGAP = _sp.v, JIT = _sp.j, SHORT_SIDE = _sp.s;
@@ -545,15 +550,14 @@
     else strip.scrollBy({ left: dir * strip.clientWidth * 0.8, behavior: "smooth" });
   }
   strip.addEventListener("scroll", updateNum, { passive: true });
-  // mobile: copy slides up as you scroll down through images, slides back on scroll up
-  let _lastSt = 0;
+  // mobile: copy folds up once you scroll into the images — driven by scroll POSITION (not direction),
+  // with hysteresis so it can't flicker at the threshold. folds off even with only 1-2 images.
   strip.addEventListener("scroll", () => {
     if (innerWidth > 768) return;
     const cap = show.querySelector(".show-caption"); if (!cap) return;
-    const st = strip.scrollTop;
-    if (st > _lastSt + 4 && st > 36) { if (!cap.classList.contains("tuck")) { cap.style.marginTop = (-cap.offsetHeight) + "px"; cap.classList.add("tuck"); } }
-    else if (st < _lastSt - 4 || st < 18) { if (cap.classList.contains("tuck")) { cap.classList.remove("tuck"); cap.style.marginTop = ""; } }
-    _lastSt = st;
+    const st = strip.scrollTop, tucked = cap.classList.contains("tuck");
+    if (!tucked && st > 48) { cap.style.marginTop = (-cap.offsetHeight) + "px"; cap.classList.add("tuck"); }
+    else if (tucked && st < 20) { cap.classList.remove("tuck"); cap.style.marginTop = ""; }
   }, { passive: true });
   strip.addEventListener("mousemove", e => {
     if (single || e.target.closest(".vtoggle") || e.target.closest(".atoggle")) { if (!single) strip.style.cursor = ""; return; }
