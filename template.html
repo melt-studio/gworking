@@ -33,10 +33,17 @@
   .card img { opacity:0; transition:opacity .4s var(--easein); }
   .card img.ld { opacity:1; }
 
+  /* loader: centred 0-100 count that masks the cold load, then hands off to the intro zoom */
+  .loader { position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center;
+    background:var(--bg); color:var(--fg); font-size:13px; letter-spacing:var(--tracking);
+    transition:opacity .6s var(--ease); }
+  .loader.done { opacity:0; pointer-events:none; }
+
   .hud { position:fixed; z-index:10; font-size:12px; letter-spacing:var(--tracking); line-height:1.4; color:var(--fg); }
-  .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; z-index:115; }  /* name always on top + clickable */
+  .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; z-index:115; }  /* header upper-left, always on top + clickable */
   .hud-tr { top:30px; right:36px; height:30px; display:flex; align-items:center; }   /* matches X */
-  .hud-bl { bottom:24px; left:34px; } .hud-br { bottom:24px; right:36px; text-align:right; }
+  .hud-bl { bottom:24px; left:34px; font-size:7px; }   /* copyright credit, kept small + understated */
+  .hud-br { bottom:24px; right:36px; text-align:right; }
   .hud-tl, .hud-tr, .hud-bl { animation: fadeUp .7s var(--easein) .5s backwards; }   /* text in after images */
   .hud-tr { transition: opacity .35s var(--easein); }                                /* close: ABOUT fades back fast */
   body.about-open .hud-tl, body.show-open .hud-tl { opacity:0; pointer-events:none; transition: opacity .5s var(--easein); }  /* header only on canvas + list */
@@ -113,19 +120,25 @@
   .uline-off::after { content:""; position:absolute; left:0; bottom:-3px; height:1.5px; width:100%;
     background:currentColor; transform:scaleX(1); transform-origin:right center; transition:transform .55s var(--easein); }
   .uline-off:hover::after { transform:scaleX(0); }
+  .namelink { cursor:pointer; color:var(--fg); text-decoration:none; }   /* centered header link, no underline */
 
-  .menu-btn { width:20px; height:14px; padding:0; border:none; background:none; cursor:pointer; position:relative; transition:opacity .3s var(--ease); }
-  .menu-btn span { position:absolute; left:0; width:100%; height:1.5px; background:var(--fg);   /* 1.5px = link-underline weight */
-    transition:transform .4s var(--ease), opacity .3s var(--ease); }
-  .menu-btn span:nth-child(1) { top:0; }
-  .menu-btn span:nth-child(2) { top:50%; transform:translateY(-50%); }
-  .menu-btn span:nth-child(3) { bottom:0; }
-  .menu-btn:hover { opacity:.5; }   /* whole icon fades to gray on hover — same as list rows, works in ≡ and X states */
-  /* hamburger morphs into an X whenever ANY overlay is open (site easing) — one consistent close everywhere */
-  body.menu-open .menu-btn span:nth-child(1), body.about-open .menu-btn span:nth-child(1), body.show-open .menu-btn span:nth-child(1) { transform:translateY(6.25px) rotate(45deg); }
-  body.menu-open .menu-btn span:nth-child(2), body.about-open .menu-btn span:nth-child(2), body.show-open .menu-btn span:nth-child(2) { opacity:0; }
-  body.menu-open .menu-btn span:nth-child(3), body.about-open .menu-btn span:nth-child(3), body.show-open .menu-btn span:nth-child(3) { transform:translateY(-6.25px) rotate(-45deg); }
-  body.menu-open .hud-tr, body.about-open .hud-tr, body.show-open .hud-tr { z-index:110; }   /* keep the X above every overlay */
+  /* top-right nav: ABOUT / INDEX as type; they cross-fade to a close × when any view is open */
+  .hud-tr { gap:18px; z-index:110; }   /* always above overlays so the × animates OFF on close, not just ON */
+  .nav { cursor:pointer; transition:opacity .3s var(--ease); }
+  .nav:hover { opacity:.5; }
+  body.about-open .nav, body.show-open .nav, body.menu-open .nav { opacity:0; pointer-events:none; }   /* hide words when a view is open */
+  /* close × — strokes draw in from the centre when a view opens, spin a quarter-turn + fade to grey on hover */
+  .closex { position:absolute; right:0; top:50%; margin-top:-8px; width:16px; height:16px; padding:0; border:none; background:none;
+    cursor:pointer; opacity:0; pointer-events:none; transition:opacity .4s var(--ease), transform .4s var(--ease); }
+  .closex span { position:absolute; left:0; top:50%; width:100%; height:1.5px; background:var(--fg); transform-origin:center;
+    transition:transform .4s var(--ease); }
+  .closex span:nth-child(1) { transform:translateY(-50%) rotate(45deg) scaleX(0); }
+  .closex span:nth-child(2) { transform:translateY(-50%) rotate(-45deg) scaleX(0); }
+  body.about-open .closex, body.show-open .closex, body.menu-open .closex { opacity:1; pointer-events:auto; }
+  body.about-open .closex span:nth-child(1), body.show-open .closex span:nth-child(1), body.menu-open .closex span:nth-child(1) { transform:translateY(-50%) rotate(45deg)  scaleX(1); }
+  body.about-open .closex span:nth-child(2), body.show-open .closex span:nth-child(2), body.menu-open .closex span:nth-child(2) { transform:translateY(-50%) rotate(-45deg) scaleX(1); }
+  /* hover: clean fade to grey (no spin) — scoped so it out-specifies the open-state opacity */
+  body.about-open .closex:hover, body.show-open .closex:hover, body.menu-open .closex:hover { opacity:.5; }
   body.menu-open .hud-bl { z-index:110; }   /* PROJECTS·2026 stays above the list */
 
   .menu-inner { width:100%; height:100%; overflow-y:auto; overflow-x:hidden; padding:104px 28px 64px 34px;
@@ -138,7 +151,7 @@
   .menu-mask-top { top:0; height:76px; } .menu-mask-bot { bottom:0; height:56px; }
   .mrow { display:grid; grid-template-columns:minmax(190px,340px) minmax(100px,180px) minmax(220px,500px) 1fr;
     align-items:center; gap:28px; padding:16px 2px; border-bottom:1px solid var(--fg);
-    cursor:pointer; color:var(--fg); font-size:12px; letter-spacing:var(--tracking); transition:opacity .2s ease; }
+    cursor:pointer; color:var(--fg); font-size:12px; letter-spacing:var(--tracking); transition:opacity .3s var(--ease); }
   .mrow:hover { opacity:.5; }
   .m-num { text-align:right; white-space:nowrap; }
   .m-client, .m-note { line-height:1.35; }
@@ -157,7 +170,7 @@
     .m-client { grid-column:2; grid-row:1; justify-self:end; text-align:right; opacity:.7; margin-left:0; }
     .m-note { grid-column:1 / -1; grid-row:2; opacity:.7; margin-left:0; }
     .m-num { display:none; }
-    .hud-tl { left:20px; height:auto; max-width:60vw; line-height:1.35; align-items:flex-start; }
+    .hud-tl { left:20px; height:auto; max-width:70vw; line-height:1.35; align-items:flex-start; }   /* upper-left, aligned with list edge */
     .hud-tr { right:20px; align-items:flex-start; height:auto; line-height:1.35; }
     .hud-bl { left:20px; }
     /* slideshow -> vertical stack, copy at top */
@@ -176,7 +189,8 @@
   /* laptop only: 1px smaller type overall + tighter project-page padding so slideshow images run larger */
   @media (min-width:769px) and (max-width:1799px) {
     .hud { font-size:11px; }
-    .show-strip { padding:44px 80px 24px 56px; }        /* was 72 / 40 top-bottom -> more image height */
+    .mrow { font-size:11px; }                          /* list copy matches the rest of the laptop type */
+    .show-strip { padding:66px 80px 24px 56px; }        /* clear the top-right X (no overlap on the image) */
     .show-caption { font-size:11px; padding:0 36px 30px 56px; }  /* was 56px bottom */
     .about-inner { font-size:11px; }
   }
@@ -184,11 +198,16 @@
 </head>
 <body>
 
+<div class="loader" id="loader"><span id="loadNum">0</span></div>
 <div class="viewport" id="viewport"><div class="canvas" id="canvas"></div></div>
 
-<div class="hud hud-tl"><span class="uline-off" id="aboutBtn">GREG ZADROZNY IS A CREATIVE DIRECTOR</span></div>
-<div class="hud hud-tr"><button class="menu-btn" id="menuBtn" aria-label="Project index"><span></span><span></span><span></span></button></div>
-<div class="hud hud-bl">PROJECTS · 2026</div>
+<div class="hud hud-tl">GREG IS A CREATIVE DIRECTOR</div>
+<div class="hud hud-tr">
+  <span class="nav" id="aboutBtn">ABOUT</span>
+  <span class="nav" id="indexBtn">INDEX</span>
+  <button class="closex" id="closeBtn" aria-label="Close"><span></span><span></span></button>
+</div>
+<div class="hud hud-bl">PROJECTS © 2026</div>
 
 <div class="overlay" id="show">
   <div class="show-strip" id="strip"></div>
@@ -428,15 +447,35 @@
     });
     setTimeout(endIntro, INTRO_DUR + 300);        // safety in case transitionend doesn't fire
   }
-  function preloadThumbs() {                   // wait until every thumbnail image (static + video poster) is ready
-    const urls = new Set();
-    PROJECTS.forEach(p => { const m = p.thumb; if (!m) return; const u = (isVideo(m) && m.poster) ? m.poster : m.file; if (u) urls.add(u); });
-    let pending = urls.size;
-    if (!pending) return startReveal();
-    urls.forEach(u => { const im = new Image(); im.onload = im.onerror = () => { if (--pending <= 0) startReveal(); }; im.src = u; });
-    setTimeout(startReveal, 1000);             // reveal promptly even on a cold cache; thumbnails fade in as they load
+  const loader = document.getElementById("loader");
+  const loadNum = document.getElementById("loadNum");
+  let loadDone = false;
+  function finishLoad() {
+    if (loadDone) return; loadDone = true;
+    loader.classList.add("done");              // fade the loader out
+    if (introActive) startReveal();            // desktop/laptop: begin the zoom as it fades (mobile is already visible)
   }
-  ensureTilesAroundView(); requestAnimationFrame(tick); if (introActive) preloadThumbs();
+  function preloadThumbs() {                   // count 0-100 against real thumbnail-load progress, then reveal
+    const urls = [];
+    PROJECTS.forEach(p => { const m = p.thumb; if (!m) return; const u = (isVideo(m) && m.poster) ? m.poster : m.file; if (u) urls.push(u); });
+    const total = urls.length || 1;
+    let loaded = urls.length ? 0 : total;
+    urls.forEach(u => { const im = new Image(); im.onload = im.onerror = () => { loaded++; }; im.src = u; });
+    let shown = 0, forced = false; const start = performance.now();
+    const MINMS = 800, MAXMS = 2600;           // show for at least MINMS; never hang past MAXMS
+    setTimeout(() => { forced = true; }, MAXMS);
+    (function count(now) {
+      const elapsed = now - start;
+      let target = forced ? 100 : (loaded / total) * 100;
+      if (target >= 100 && elapsed < MINMS) target = 99;   // hold just under 100 until the min time (no flash)
+      shown += (target - shown) * 0.14;
+      if (target >= 100 && target - shown < 0.5) shown = 100;
+      loadNum.textContent = Math.round(shown);
+      if (shown >= 100) { finishLoad(); return; }
+      requestAnimationFrame(count);
+    })(performance.now());
+  }
+  ensureTilesAroundView(); requestAnimationFrame(tick); preloadThumbs();
 
   // re-tile with new spacing when the viewport crosses a device breakpoint
   const tierOf = (w) => w >= 1800 ? "d" : w >= 768 ? "l" : "p";
@@ -622,15 +661,13 @@
     setTimeout(() => menu.classList.remove("closing"), 1150);
   }
   window.closeMenu = closeMenu;
-  const menuBtn = document.getElementById("menuBtn");
-  // top-right button is the single, consistent control: closes whatever overlay is open, else opens the list
-  menuBtn.addEventListener("click", () => {
+  document.getElementById("indexBtn").addEventListener("click", openMenu);   // INDEX -> list view
+  // the × closes whatever view is open (project, About, or list)
+  document.getElementById("closeBtn").addEventListener("click", () => {
     if (show.classList.contains("active")) closeShow();
     else if (about.classList.contains("active")) closeAbout();
     else if (menu.classList.contains("active")) closeMenu();
-    else openMenu();
   });
-  menuBtn.addEventListener("mousedown", e => e.stopPropagation());
   menuList.addEventListener("click", e => {
     const row = e.target.closest(".mrow"); if (!row) return;
     const p = ORDERED[+row.dataset.i];

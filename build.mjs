@@ -26,7 +26,7 @@ function ver(rel) {                       // content-hash query so a changed ass
 
 if (!TOKEN) { console.error("ERROR: set AIRTABLE_TOKEN (Airtable personal access token)."); process.exit(1); }
 
-const F = { name:"name", overview:"copyOverview", client:"client", copy:"copy", thumb:"projectThumbnail", imgs:"projectImages" };
+const F = { name:"name", overview:"scope", client:"client", copy:"copy", thumb:"projectThumbnail", imgs:"projectImages" };
 
 const slugify = s => s.toLowerCase().replace(/&/g,"and").replace(/['’]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const extFor  = a => { const e = path.extname(a.filename||"").toLowerCase();
