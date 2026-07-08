@@ -42,7 +42,7 @@
   .hud { position:fixed; z-index:10; font-size:12px; letter-spacing:var(--tracking); line-height:1.4; color:var(--fg); }
   .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; z-index:115; }  /* header upper-left, always on top + clickable */
   .hud-tr { top:30px; right:36px; height:30px; display:flex; align-items:center; }   /* matches X */
-  .hud-bl { bottom:24px; left:34px; font-size:7px; }   /* copyright credit, kept small + understated */
+  .hud-bl { bottom:24px; left:34px; font-size:10px; }   /* copyright credit, a touch smaller than the main copy */
   .hud-br { bottom:24px; right:36px; text-align:right; }
   .hud-tl, .hud-tr, .hud-bl { animation: fadeUp .7s var(--easein) .5s backwards; }   /* text in after images */
   .hud-tr { transition: opacity .35s var(--easein); }                                /* close: ABOUT fades back fast */
@@ -70,8 +70,9 @@
     padding:72px 80px 40px 56px; min-height:0; scrollbar-width:none; }
   .show-strip.single { justify-content:center; }
   .show-strip::-webkit-scrollbar { display:none; }
-  .slide { flex:0 0 auto; height:100%; aspect-ratio:var(--aspect,1.5); background:transparent; position:relative; }
-  .slide img, .slide video { width:100%; height:100%; object-fit:contain; display:block; }
+  .slide { flex:0 0 auto; height:100%; background:transparent; position:relative; }
+  /* image itself is always full strip height, width follows its real rendered aspect -> uniform height, variable width */
+  .slide img, .slide video { height:100%; width:auto; display:block; }
   .slide img { opacity:0; transition:opacity .4s var(--easein); }
   .slide img.ld { opacity:1; }
   .overlay.active .slide { animation: fadeUp .55s var(--easein) backwards; }
@@ -285,26 +286,24 @@
     while (j > 1) { const x = P[i][j]; cuts.unshift(x); i = x; j--; }
     const r = []; let s = 0; for (const c of cuts) { r.push([s, c]); s = c; } r.push([s, n]); return r;
   }
-  const rowWidth = r => r.reduce((s, p) => s + p._s.w, 0) + (r.length - 1) * HGAP;
-  // partition a sublist into balanced rows (~TARGET_ROW_W each)
-  function rowsFor(list) {
-    if (!list.length) return [];
-    const sumW = list.reduce((s, p) => s + p._s.w + HGAP, 0);
-    const rc = Math.max(1, Math.min(list.length, Math.round(sumW / (TARGET_ROW_W + HGAP))));
-    return partition(list.map(p => p._s.w + HGAP), rc).map(([a, b]) => list.slice(a, b));
-  }
-  // lay out a group of rows; each row is gap-justified to groupTileW (its own zone width, so
-  // the locked head's internal spacing never depends on the shuffled tail), then the justified
-  // row is centered inside the shared globalTileW. y advances downward; returns the next y.
-  function placeRows(rows, groupTileW, globalTileW, y0) {
-    let y = y0;
-    rows.forEach(r => {
+  // single balanced partition over ALL projects (keeps every row ~TARGET_ROW_W so the tile
+  // has no oversized outlier row -> even spacing, no big inter-tile voids). PROJECTS is already
+  // ordered as [locked head ... shuffled tail], so the opening still anchors on project #1.
+  function layout() {
+    PROJECTS.forEach(p => { p._s = sizeFor(p); });
+    const N = PROJECTS.length;
+    const sumW = PROJECTS.reduce((s, p) => s + p._s.w + HGAP, 0);
+    const rowCount = Math.max(1, Math.min(N, Math.round(sumW / (TARGET_ROW_W + HGAP))));
+    const rows = partition(PROJECTS.map(p => p._s.w + HGAP), rowCount).map(([a, b]) => PROJECTS.slice(a, b));
+    const rowW = rows.map(r => r.reduce((s, p) => s + p._s.w, 0) + (r.length - 1) * HGAP);
+    const tileW = Math.max(...rowW);
+    let y = 0;
+    rows.forEach((r, ri) => {
       const bandH = Math.max(...r.map(p => p._s.h));
-      const rowW = rowWidth(r);
-      const extra = r.length > 1 ? Math.min((groupTileW - rowW) / (r.length - 1), HGAP * 0.55) : 0;
+      // gap-justify (capped) so rows fill the tile evenly; jitter varies the gaps a touch
+      const extra = r.length > 1 ? Math.min((tileW - rowW[ri]) / (r.length - 1), HGAP * 0.55) : 0;
       const gap = HGAP + Math.max(0, extra);
-      const justW = rowW + (gap - HGAP) * (r.length - 1);
-      let x = (globalTileW - justW) / 2;
+      let x = (tileW - (rowW[ri] + (gap - HGAP) * (r.length - 1))) / 2;
       r.forEach(p => {
         const dx = jit(p.slug + "x") * JIT, dy = jit(p.slug + "y") * JIT;
         p._pos = { x: x + dx, y: y + (bandH - p._s.h) / 2 + dy, w: p._s.w, h: p._s.h };
@@ -312,19 +311,7 @@
       });
       y += bandH + VGAP;
     });
-    return y;
-  }
-  function layout() {
-    PROJECTS.forEach(p => { p._s = sizeFor(p); });
-    const lock = Math.min(LOCK_COUNT, PROJECTS.length);
-    const headRows = rowsFor(PROJECTS.slice(0, lock));   // fixed: depends only on the locked head
-    const tailRows = rowsFor(PROJECTS.slice(lock));       // reshuffled each load
-    const headTileW = headRows.length ? Math.max(...headRows.map(rowWidth)) : 0;
-    const tailTileW = tailRows.length ? Math.max(...tailRows.map(rowWidth)) : 0;
-    const globalTileW = Math.max(headTileW, tailTileW, 1);
-    let y = placeRows(headRows, headTileW || globalTileW, globalTileW, 0);
-    y = placeRows(tailRows, tailTileW || globalTileW, globalTileW, y);
-    return { w: Math.round(globalTileW), h: Math.round(y) };
+    return { w: Math.round(tileW), h: Math.round(y) };
   }
   let TILE = layout();
   let PITCHX = TILE.w + HGAP, PITCHY = TILE.h;
@@ -544,7 +531,8 @@
     capNum.textContent = String(cur + 1).padStart(2, "0") + " / " + String(showCount).padStart(2, "0");
   }
   function openShow(p) {
-    const list = [...(p.slides || []), ...(p.gallery || [])];
+    let list = [...(p.slides || []), ...(p.gallery || [])];
+    if (innerWidth <= 768) list = list.filter(m => !m.divider);   // phone stacks vertically -> drop the filmstrip spacers
     const media = list.length ? list : (p.thumb ? [p.thumb] : []);
     showCount = media.length; single = showCount <= 1;
     strip.innerHTML = media.map(m => {

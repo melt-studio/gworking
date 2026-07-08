@@ -148,6 +148,7 @@ for (const rec of records) {
     const rel = path.relative(OUT, dest).split(path.sep).join("/");
     const out = { file: ver(rel), type, w, h };
     if (poster) out.poster = ver(poster);
+    if (/_websitediv/i.test(att.filename || "")) out.divider = true;   // spacer image: shown on the desktop filmstrip, hidden on phone
     return out;
   }
 
