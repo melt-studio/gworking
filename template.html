@@ -259,7 +259,7 @@
   function jit(seed) { let h = 2166136261; for (let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);} return ((h>>>0)%1000)/1000*2-1; }
 
   /* ---- LAYOUT: balanced rows, gap-justified to fill width (no central void) ---- */
-  const TARGET_ROW_W = 3000;
+  const TARGET_ROW_W = 3800;   // longer rows -> more images across before wrapping
   // canvas spacing differs by device: desktop keeps the original airy layout; laptop/phone tighten
   function spacingFor(w) {
     if (w >= 1800) return { h:380, v:374, j:30, s:415 };  // desktop  (s = horizontal height)
@@ -270,8 +270,9 @@
   let HGAP = _sp.h, VGAP = _sp.v, JIT = _sp.j, SHORT_SIDE = _sp.s;
   function sizeFor(p) {
     let a = Math.min(Math.max(aspectOf(p.thumb, 1), 0.62), 1.85);
-    // verticals run taller than the horizontals' shared height; width follows the aspect
-    const h = a < 1 ? Math.round(SHORT_SIDE * 1.3) : SHORT_SIDE;
+    // height factor by shape: tall verticals, squares boosted ~25%, horizontals a touch taller
+    const f = a < 0.9 ? 1.3 : (a <= 1.15 ? 1.25 : 1.05);
+    const h = Math.round(SHORT_SIDE * f);
     return { a, w: Math.round(h * a), h };
   }
   function partition(w, k) {
@@ -449,7 +450,7 @@
     let loaded = urls.length ? 0 : total;
     urls.forEach(u => { const im = new Image(); im.onload = im.onerror = () => { loaded++; }; im.src = u; });
     let shown = 0, forced = false; const start = performance.now();
-    const MINMS = 800, MAXMS = 2600;           // show for at least MINMS; never hang past MAXMS
+    const MINMS = 800, MAXMS = 6000;           // show for at least MINMS; wait longer so thumbnails are actually ready (cap so it can't hang)
     setTimeout(() => { forced = true; }, MAXMS);
     (function count(now) {
       const elapsed = now - start;
