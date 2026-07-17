@@ -96,6 +96,8 @@
   .show-caption .desc { display:block; margin-bottom:10px; }
   .show-caption .cl { display:block; }
   .show-caption .num { white-space:nowrap; }
+  .clink { color:var(--fg); text-decoration:underline; text-underline-offset:2px; cursor:pointer; transition:opacity .3s var(--ease); }
+  .clink:hover { opacity:.5; }
 
   /* ===== ABOUT ===== */
   .about-inner { margin:auto; max-width:720px; padding:40px; font-size:12px; letter-spacing:var(--tracking); line-height:1.6;
@@ -525,6 +527,33 @@
   const capNum = document.getElementById("capNum");
   let showCount = 0, single = false;
 
+  // copy links (target = a project's "ref"/name, or an http(s) URL):
+  //   WORD[target]            -> the single word links            e.g.  BILLIONS[billions66]
+  //   [multi word][target]    -> the whole phrase links           e.g.  [the campaign][billions66]
+  //   [label](target)         -> markdown-style also supported
+  function renderCopy(text) {
+    const e = s => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const link = (label, target) => {
+      target = target.trim();
+      return /^https?:\/\//i.test(target)
+        ? `<a class="clink" href="${target}" target="_blank" rel="noopener noreferrer">${label}</a>`
+        : `<a class="clink" data-project="${target}">${label}</a>`;
+    };
+    return e(text)
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (m, label, t) => link(label, t))
+      .replace(/\[([^\]]+)\]\[([^\]]+)\]/g, (m, label, t) => link(label, t))
+      .replace(/([^\s\[\]]+)\[([^\]]+)\]/g,  (m, label, t) => link(label, t));
+  }
+  capDesc.addEventListener("click", (e) => {           // internal links jump to the referenced project
+    const a = e.target.closest("a.clink[data-project]"); if (!a) return;
+    e.preventDefault();
+    const key = a.dataset.project.toLowerCase();
+    const proj = ORDERED.find(p => (p.ref || "").toLowerCase() === key)
+      || ORDERED.find(p => p.slug.toLowerCase() === key)
+      || ORDERED.find(p => (p.name || "").toLowerCase() === key);
+    if (proj) openShow(proj);
+  });
+
   function updateNum() {
     if (!showCount) return;
     const kids = [...strip.children]; let cur = 0; const sl = strip.scrollLeft;
@@ -551,7 +580,7 @@
       v.addEventListener("playing", () => setTimeout(check, 700));
     });
     capName.textContent = p.name;
-    capDesc.textContent = p.copy || "";
+    capDesc.innerHTML = renderCopy(p.copy || "");
     capClient.textContent = p.client ? ("Client — " + p.client) : "";
     strip.scrollLeft = 0; strip.scrollTop = 0;
     const _cap = show.querySelector(".show-caption"); if (_cap) { _cap.classList.remove("tuck"); _cap.style.marginTop = ""; }
