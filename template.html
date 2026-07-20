@@ -371,9 +371,16 @@
         // gap-justify (capped) so rows fill the block evenly; jitter varies the gaps a touch
         const extra = r.length > 1 ? Math.min((W - rw) / (r.length - 1), HGAP * 0.55) : 0;
         const gap = HGAP + Math.max(0, extra);
-        let x = (W - (rw + (gap - HGAP) * (r.length - 1))) / 2;
+        // Nudge each row sideways by a different amount. Centring every row lines the gaps up into
+        // vertical "rivers" of empty space; staggering breaks them. The shift is uniform per row, so
+        // each row keeps exactly HGAP to its neighbouring block — tiling is unaffected.
+        const stagger = jit("row" + ri) * HGAP * 0.45;
+        let x = (W - (rw + (gap - HGAP) * (r.length - 1))) / 2 + stagger;
         r.forEach(p => {
-          const dx = jit(p.slug + "x") * JIT, dy = jit(p.slug + "y") * JIT;
+          // dx stays small (must not eat into the horizontal gap); dy is much larger so cards sit at
+          // staggered heights instead of on a shared baseline — that's what stops the layout reading
+          // as clean rows with even gaps. Capped at 35% of VGAP so rows can never collide.
+          const dx = jit(p.slug + "x") * JIT, dy = jit(p.slug + "y") * VGAP * 0.35;
           pos[p._idx] = { x: x + dx, y: y + (bandH - p._s.h) / 2 + dy, w: p._s.w, h: p._s.h };
           x += p._s.w + gap;
         });
