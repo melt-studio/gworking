@@ -85,15 +85,30 @@ function videoDims(file) {
   } catch { return null; }
 }
 
-// extract a video's first frame as a poster image (scaled to display dims) so video
-// thumbnails paint instantly like static images
+// Bake a still for each video (scaled to display dims) so video thumbnails paint
+// instantly like static images. Prefers a near-FINAL frame (animations usually resolve
+// on their end state, so it reads as more representative), falling back to the first
+// frame. Seeks from the end rather than buffering the file, so long clips stay cheap.
 function posterFor(file, w, h) {
   const out = file.replace(/\.[^.]+$/, ".poster.jpg");
+  const vf = (w && h) ? `scale=${w}:${h}` : "scale=iw:ih";
+  const rel = () => path.relative(OUT, out).split(path.sep).join("/");
+  const run = (pre) => execFileSync(ffmpeg.path, ["-y", "-loglevel", "error", ...pre, "-i", file, "-frames:v", "1", "-vf", vf, "-q:v", "3", out]);
+  const ok = () => { try { return fs.statSync(out).size > 1024; } catch { return false; } };
+  try { run(["-sseof", "-0.3"]); if (ok()) return rel(); } catch {}
+  try { run([]); if (ok()) return rel(); } catch (e) { console.warn("  poster skip", path.basename(file), e.message); }
+  return null;
+}
+
+// Animated GIFs repaint constantly and tank scrolling on phones, so bake a static
+// frame we can serve there instead. Uses the LAST frame (animations usually resolve
+// on their final composed state) via a reverse-then-grab-first trick.
+function gifPosterFor(file) {
+  const out = file.replace(/\.[^.]+$/, ".poster.jpg");
   try {
-    const vf = (w && h) ? `scale=${w}:${h}` : "scale=iw:ih";
-    execFileSync(ffmpeg.path, ["-y", "-loglevel", "error", "-i", file, "-frames:v", "1", "-vf", vf, "-q:v", "3", out]);
+    execFileSync(ffmpeg.path, ["-y", "-loglevel", "error", "-i", file, "-vf", "reverse", "-frames:v", "1", "-q:v", "3", out]);
     return path.relative(OUT, out).split(path.sep).join("/");
-  } catch (e) { console.warn("  poster skip", path.basename(file), e.message); return null; }
+  } catch (e) { console.warn("  gif poster skip", path.basename(file), e.message); return null; }
 }
 
 // Quality-first image optimization. Only DOWNSCALES files past the ceiling
@@ -144,6 +159,7 @@ for (const rec of records) {
       const d = videoDims(dest); if (d) { w = d.width; h = d.height; }
       poster = posterFor(dest, w, h);
     }
+    else if (/\.gif$/i.test(dest) || type === "image/gif") { poster = gifPosterFor(dest); }   // static frame for phones
     else if (maxEdge) { const d = await optimizeImage(dest, maxEdge); if (d) { w = d.width; h = d.height; } }
     const rel = path.relative(OUT, dest).split(path.sep).join("/");
     const out = { file: ver(rel), type, w, h };
