@@ -152,10 +152,17 @@
   /* opaque bands so rows scroll cleanly under the fixed header/footer labels */
   .menu-mask { position:absolute; left:0; right:0; background:var(--bg); z-index:105; pointer-events:none; }
   .menu-mask-top { top:0; height:76px; } .menu-mask-bot { bottom:0; height:56px; }
-  .mrow { display:grid; grid-template-columns:minmax(190px,340px) minmax(100px,180px) minmax(220px,500px) 1fr;
+  /* scope takes the leftover width so a full comma list fits on one line; count sits at the far right */
+  .mrow { display:grid; grid-template-columns:minmax(180px,300px) minmax(100px,150px) 1fr auto;
     align-items:center; gap:28px; padding:16px 2px; border-bottom:1px solid var(--fg);
-    cursor:pointer; color:var(--fg); font-size:12px; letter-spacing:var(--tracking); transition:opacity .3s var(--ease); }
+    cursor:pointer; color:var(--fg); font-size:12px; letter-spacing:var(--tracking);
+    overflow:hidden; max-height:200px;
+    transition:opacity .3s var(--ease), max-height .45s var(--ease), padding .45s var(--ease), border-color .45s var(--ease); }
   .mrow:hover { opacity:.5; }
+  /* filtered-out rows fade then collapse, so the remaining list slides together */
+  .mrow.hide { opacity:0; max-height:0; padding-top:0; padding-bottom:0; border-bottom-color:transparent; pointer-events:none; }
+  .mtag { cursor:pointer; }
+  .mtag:hover, .mtag.on { text-decoration:underline; text-underline-offset:2px; }
   .m-num { text-align:right; white-space:nowrap; }
   .m-client, .m-note { line-height:1.35; }
   .m-note { margin-left:22px; }   /* extra breathing room between client and copyOverview */
@@ -696,15 +703,18 @@
   function buildMenuRows() {
     menuList.innerHTML = ORDERED.map((p, i) => {
       const n = (p.slides && p.slides.length) ? String(p.slides.length).padStart(2, "0") : "";
-      return `<div class="mrow" data-i="${i}" style="--i:${i}">`
+      const tags = (p.overview || "").split(",").map(s => s.trim()).filter(Boolean);
+      const note = tags.map(t => `<span class="mtag" data-tag="${escH(t.toLowerCase())}">${escH(t)}</span>`).join(", ");
+      return `<div class="mrow" data-i="${i}" data-tags="${escH(tags.map(t => t.toLowerCase()).join("|"))}" style="--i:${i}">`
         + `<span class="m-name">${escH(p.name)}</span>`
         + `<span class="m-client">${escH(p.client || "")}</span>`
-        + `<span class="m-note">${escH(p.overview || "")}</span>`
+        + `<span class="m-note">${note}</span>`
         + `<span class="m-num">${n}</span></div>`;
     }).join("");
   }
   function openMenu() {
     buildMenuRows();
+    activeTag = null;                            // always open unfiltered
     menu.classList.remove("closing");
     void menu.offsetWidth;                     // restart the staggered row entrance each open
     menu.classList.add("active");
@@ -725,7 +735,19 @@
     else if (about.classList.contains("active")) closeAbout();
     else if (menu.classList.contains("active")) closeMenu();
   });
+  // clicking a scope tag filters the index to projects sharing it; clicking it again clears
+  let activeTag = null;
+  function applyFilter(t) {
+    activeTag = (activeTag === t) ? null : t;
+    menuList.querySelectorAll(".mrow").forEach(r => {
+      const has = !activeTag || (r.dataset.tags || "").split("|").includes(activeTag);
+      r.classList.toggle("hide", !has);
+    });
+    menuList.querySelectorAll(".mtag").forEach(el => el.classList.toggle("on", !!activeTag && el.dataset.tag === activeTag));
+  }
   menuList.addEventListener("click", e => {
+    const tag = e.target.closest(".mtag");
+    if (tag) { applyFilter(tag.dataset.tag); return; }        // tag click filters instead of opening the project
     const row = e.target.closest(".mrow"); if (!row) return;
     const p = ORDERED[+row.dataset.i];
     menu.classList.remove("active"); menu.classList.remove("closing");   // hide index instantly, project fades in
