@@ -144,7 +144,12 @@ const projects = [];
 
 for (const rec of records) {
   const f = rec.fields;
-  if (f[F.name] === "About") { about = f[F.copy] || ""; continue; }
+  // The About row does double duty: its copy always feeds the About page, and if you give it a
+  // projectThumbnail it ALSO becomes a card on the canvas / a row in the index that opens About
+  // (the "secret" link). Leave that attachment empty and it stays hidden exactly as before.
+  const isAboutRow = f[F.name] === "About";
+  if (isAboutRow) about = f[F.copy] || "";
+  if (isAboutRow && !(f[F.thumb] || [])[0]) continue;
   if (!f[F.name]) continue;
   // unique per record so duplicate project titles never share/overwrite an asset folder
   const slug = slugify(f[F.name]) + "-" + rec.id;
@@ -185,7 +190,14 @@ for (const rec of records) {
   // a project with no usable thumbnail can't be tiled on the canvas — drop it
   if (!thumb) { console.warn(`  DROP ${slug}: no thumbnail`); continue; }
 
-  projects.push({ name: f[F.name], slug, client: f[F.client] || "", copy: f[F.copy] || "", overview: f[F.overview] || "", ref: f[F.ref] || "", thumb, slides, gallery: [] });
+  projects.push({
+    name: f[F.name], slug,
+    client: f[F.client] || "",
+    copy: isAboutRow ? "" : (f[F.copy] || ""),          // About text already ships with the About page
+    overview: f[F.overview] || "",
+    ref: isAboutRow ? "about" : (f[F.ref] || ""),       // marks it as the secret About link
+    thumb, slides, gallery: [],
+  });
   console.log(`  ${slug}: thumb ${thumb?1:0}, slides ${slides.length}`);
 }
 

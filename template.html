@@ -275,6 +275,8 @@
   const SND_ON  = '<svg viewBox="0 0 24 24"><polygon points="3 9 3 15 7 15 12 19 12 5 7 9"/><path d="M16 8.5a5 5 0 0 1 0 7" fill="none" stroke="#fff" stroke-width="2"/></svg>';
   const hasAudio = (v) => v.mozHasAudio || !!v.webkitAudioDecodedByteCount || !!(v.audioTracks && v.audioTracks.length);
   const isVideo = (m) => m && m.type && m.type.startsWith("video");
+  // "secret" link: a project whose Airtable ref is `about` opens the About page instead of its slideshow
+  const isAboutLink = (p) => (p.ref || "").trim().toLowerCase() === "about";
   const aspectOf = (m, d) => (m && m.w && m.h) ? m.w / m.h : d;
   function jit(seed) { let h = 2166136261; for (let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);} return ((h>>>0)%1000)/1000*2-1; }
 
@@ -436,7 +438,7 @@
     wrap.innerHTML = `<div class="card" style="width:${p._pos.w}px;height:${p._pos.h}px;">${mediaEl(p.thumb)}</div>`;
     wrap.querySelectorAll("img").forEach(im => { if (im.complete && im.naturalWidth) im.classList.add("ld"); });
     const cardEl = wrap.querySelector(".card");
-    cardEl.addEventListener("click", () => { if (dragDistance < 5) openShow(p); });
+    cardEl.addEventListener("click", () => { if (dragDistance < 5) { isAboutLink(p) ? openAbout(false) : openShow(p); } });
     const v = wrap.querySelector("video"); if (v) { v.muted = true; videoObserver.observe(v); }
     return wrap;
   }
@@ -755,11 +757,15 @@
 
   /* ---- ABOUT ---- */
   const about = document.getElementById("about");
-  document.getElementById("aboutBtn").addEventListener("click", () => {   // name always opens About, from anywhere
+  function openAbout(instant) {                 // shared by the ABOUT link and the "secret" project
     if (show.classList.contains("active")) closeShow();
-    if (menu.classList.contains("active")) closeMenu();
+    if (menu.classList.contains("active")) {
+      if (instant) { menu.classList.remove("active", "closing"); document.body.classList.remove("menu-open"); }
+      else closeMenu();
+    }
     about.classList.add("active"); document.body.classList.add("about-open"); liveVids.forEach(v => v.pause());
-  });
+  }
+  document.getElementById("aboutBtn").addEventListener("click", () => openAbout(false));
   document.getElementById("aboutBtn").addEventListener("mousedown", e => e.stopPropagation());
   function closeAbout() { about.classList.add("closing"); about.classList.remove("active"); document.body.classList.remove("about-open"); liveVids.forEach(v => v.play().catch(()=>{})); setTimeout(()=>about.classList.remove("closing"), 700); }
   window.closeAbout = closeAbout;
@@ -769,7 +775,9 @@
   const menuList = document.getElementById("menuList");
   const escH = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
   function buildMenuRows() {
+    // the secret About card lives on the canvas only — keep it out of the index
     menuList.innerHTML = ORDERED.map((p, i) => {
+      if (isAboutLink(p)) return "";
       const n = (p.slides && p.slides.length) ? String(p.slides.length).padStart(2, "0") : "";
       const tags = (p.overview || "").split(",").map(s => s.trim()).filter(Boolean);
       const note = tags.map(t => `<span class="mtag" data-tag="${escH(t.toLowerCase())}">${escH(t)}</span>`).join(", ");
@@ -818,6 +826,7 @@
     if (tag) { applyFilter(tag.dataset.tag); return; }        // tag click filters instead of opening the project
     const row = e.target.closest(".mrow"); if (!row) return;
     const p = ORDERED[+row.dataset.i];
+    if (isAboutLink(p)) { openAbout(true); return; }                     // the "secret" row goes to About
     menu.classList.remove("active"); menu.classList.remove("closing");   // hide index instantly, project fades in
     document.body.classList.remove("menu-open");
     openShow(p);
