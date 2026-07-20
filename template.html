@@ -279,7 +279,10 @@
   function jit(seed) { let h = 2166136261; for (let i=0;i<seed.length;i++){h^=seed.charCodeAt(i);h=Math.imul(h,16777619);} return ((h>>>0)%1000)/1000*2-1; }
 
   /* ---- LAYOUT: balanced rows, gap-justified to fill width (no central void) ---- */
-  const TARGET_ROW_W = 3800;   // longer rows -> more images across before wrapping
+  // The tile must always be comfortably bigger than the screen in BOTH directions, or the canvas
+  // repeats within a single view. A fixed row width can't guarantee that (too few projects -> too
+  // few rows -> a short tile), so the row count is derived from the project count + viewport below.
+  const MIN_TILE_SCREENS = 1.6;
   // canvas spacing differs by device: desktop keeps the original airy layout; laptop/phone tighten
   function spacingFor(w) {
     if (w >= 1800) return { h:380, v:374, j:30, s:415 };  // desktop  (s = horizontal height)
@@ -288,6 +291,7 @@
   }
   let _sp = spacingFor(innerWidth);
   let HGAP = _sp.h, VGAP = _sp.v, JIT = _sp.j, SHORT_SIDE = _sp.s;
+
   function sizeFor(p) {
     let a = Math.min(Math.max(aspectOf(p.thumb, 1), 0.62), 1.85);
     // height factor by shape: tall verticals, squares boosted ~25%, horizontals a touch taller
@@ -307,35 +311,87 @@
     while (j > 1) { const x = P[i][j]; cuts.unshift(x); i = x; j--; }
     const r = []; let s = 0; for (const c of cuts) { r.push([s, c]); s = c; } r.push([s, n]); return r;
   }
-  // single balanced partition over ALL projects (keeps every row ~TARGET_ROW_W so the tile
+  // single balanced partition over ALL projects (rows come out evenly weighted so the tile
   // has no oversized outlier row -> even spacing, no big inter-tile voids). PROJECTS is already
   // ordered as [locked head ... shuffled tail], so the opening still anchors on project #1.
+  /* ---- BLOCK VARIANTS -----------------------------------------------------
+     Rather than one arrangement repeating, we build VARIANT_COUNT completely separate
+     arrangements of ALL projects — each a fresh shuffle, so different work sits in
+     different rows and in a different order. Every variant is then packed into the SAME
+     block footprint (rows justified to one shared width; vertical slack spread evenly so
+     the heights match exactly), which is what lets them tile together seamlessly.
+     Each tile of the canvas picks a variant, so wherever you pan the composition differs. */
+  // NOTE: >1 variant looks appealing but breaks the one guarantee that matters — with a single
+  // arrangement any project is always exactly one full block away from its next copy, so it can
+  // never appear twice on screen. Different arrangements per block let a project sit at the bottom
+  // of one and the top of the next, putting two copies side by side across the seam. Keep at 1.
+  const VARIANT_COUNT = 1;
+  let VARIANTS = [];                                     // VARIANTS[k][projectIndex] = {x,y,w,h}
+  function shuffledCopy(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
   function layout() {
-    PROJECTS.forEach(p => { p._s = sizeFor(p); });
+    PROJECTS.forEach((p, i) => { p._s = sizeFor(p); p._idx = i; });
     const N = PROJECTS.length;
     const sumW = PROJECTS.reduce((s, p) => s + p._s.w + HGAP, 0);
-    const rowCount = Math.max(1, Math.min(N, Math.round(sumW / (TARGET_ROW_W + HGAP))));
-    const rows = partition(PROJECTS.map(p => p._s.w + HGAP), rowCount).map(([a, b]) => PROJECTS.slice(a, b));
-    const rowW = rows.map(r => r.reduce((s, p) => s + p._s.w, 0) + (r.length - 1) * HGAP);
-    const tileW = Math.max(...rowW);
-    let y = 0;
-    rows.forEach((r, ri) => {
-      const bandH = Math.max(...r.map(p => p._s.h));
-      // gap-justify (capped) so rows fill the tile evenly; jitter varies the gaps a touch
-      const extra = r.length > 1 ? Math.min((tileW - rowW[ri]) / (r.length - 1), HGAP * 0.55) : 0;
-      const gap = HGAP + Math.max(0, extra);
-      let x = (tileW - (rowW[ri] + (gap - HGAP) * (r.length - 1))) / 2;
-      r.forEach(p => {
-        const dx = jit(p.slug + "x") * JIT, dy = jit(p.slug + "y") * JIT;
-        p._pos = { x: x + dx, y: y + (bandH - p._s.h) / 2 + dy, w: p._s.w, h: p._s.h };
-        x += p._s.w + gap;
+    // Row count from the work itself + the viewport: aim for a block shaped like the screen (repeats
+    // sit equally far in every direction), but never let it fall below MIN_TILE_SCREENS in either
+    // direction — that's the guard against the canvas visibly repeating inside one screen.
+    const avgBand = PROJECTS.reduce((s, p) => s + p._s.h, 0) / N + VGAP;
+    const sw = Math.max(innerWidth, 320), sh = Math.max(innerHeight, 320);
+    const minRows = Math.ceil(MIN_TILE_SCREENS * sh / avgBand);        // tall enough
+    const maxRows = Math.floor(sumW / (MIN_TILE_SCREENS * sw));        // wide enough
+    let rowCount = Math.round(Math.sqrt(sumW * sh / (avgBand * sw))) || 1;
+    if (minRows <= maxRows) rowCount = Math.max(minRows, Math.min(maxRows, rowCount));
+    rowCount = Math.max(1, Math.min(N, rowCount));
+
+    // build each variant's rows (variant 0 keeps the current order so the opening never moves)
+    const arrs = [];
+    for (let k = 0; k < VARIANT_COUNT; k++) {
+      const order = k === 0 ? PROJECTS.slice() : shuffledCopy(PROJECTS);
+      const rows = partition(order.map(p => p._s.w + HGAP), rowCount).map(([a, b]) => order.slice(a, b));
+      arrs.push({
+        rows,
+        bands: rows.map(r => Math.max(...r.map(p => p._s.h))),
+        rowW:  rows.map(r => r.reduce((s, p) => s + p._s.w, 0) + (r.length - 1) * HGAP),
       });
-      y += bandH + VGAP;
+    }
+    // one shared footprint big enough for every variant -> identical tiles -> seamless repeat
+    const W = Math.max(...arrs.map(a => Math.max(...a.rowW)));
+    const H = Math.max(...arrs.map(a => a.bands.reduce((s, b) => s + b, 0) + a.bands.length * VGAP));
+
+    VARIANTS = arrs.map(a => {
+      const pos = new Array(N);
+      const vgap = (H - a.bands.reduce((s, b) => s + b, 0)) / a.bands.length;   // spread slack evenly
+      let y = 0;
+      a.rows.forEach((r, ri) => {
+        const bandH = a.bands[ri], rw = a.rowW[ri];
+        // gap-justify (capped) so rows fill the block evenly; jitter varies the gaps a touch
+        const extra = r.length > 1 ? Math.min((W - rw) / (r.length - 1), HGAP * 0.55) : 0;
+        const gap = HGAP + Math.max(0, extra);
+        let x = (W - (rw + (gap - HGAP) * (r.length - 1))) / 2;
+        r.forEach(p => {
+          const dx = jit(p.slug + "x") * JIT, dy = jit(p.slug + "y") * JIT;
+          pos[p._idx] = { x: x + dx, y: y + (bandH - p._s.h) / 2 + dy, w: p._s.w, h: p._s.h };
+          x += p._s.w + gap;
+        });
+        y += bandH + vgap;
+      });
+      return pos;
     });
-    return { w: Math.round(tileW), h: Math.round(y) };
+    PROJECTS.forEach(p => { p._pos = VARIANTS[0][p._idx]; });   // opening frame reads variant 0
+    return { w: Math.round(W), h: Math.round(H) };
+  }
+  function permFor(col, row) {
+    if (col === 0 && row === 0) return 0;          // opening tile keeps the original arrangement
+    return Math.abs((col * 73856093) ^ (row * 19349663)) % VARIANTS.length;
   }
   let TILE = layout();
+
   let PITCHX = TILE.w + HGAP, PITCHY = TILE.h;
+
 
   let scale = 1, introActive = true, introReady = false, introStart = 0, introX0 = 0, introY0 = 0;
   const INTRO_DUR = 1600, INTRO_SCALE = 0.38;
@@ -362,7 +418,8 @@
     return `<img src="${m.file}" alt="" loading="lazy" decoding="async" onload="this.classList.add('ld')">`;
   }
   function buildCard(p, col, rowT) {
-    const x = p._pos.x + col * PITCHX, y = p._pos.y + rowT * PITCHY;
+    const q = VARIANTS[permFor(col, rowT)][p._idx];
+    const x = q.x + col * PITCHX, y = q.y + rowT * PITCHY;
     const wrap = document.createElement("div");
     wrap.className = "card-wrap";
     wrap.style.left = x + "px";
@@ -392,17 +449,21 @@
     const vx = -canvasX / scale, vy = -canvasY / scale;
     const x0 = vx - mx, x1 = vx + vw + mx, y0 = vy - my, y1 = vy + vh + my;
     const c0 = Math.floor(x0 / PITCHX), c1 = Math.floor(x1 / PITCHX);
-    const r0 = Math.floor(y0 / PITCHY), r1 = Math.floor(y1 / PITCHY);
     const frag = document.createDocumentFragment(), fresh = [];
-    for (let col = c0; col <= c1; col++) for (let row = r0; row <= r1; row++) {
-      const ox = col * PITCHX, oy = row * PITCHY;
-      for (const p of PROJECTS) {
-        const x = p._pos.x + ox, y = p._pos.y + oy;
-        if (x + p._pos.w < x0 || x > x1 || y + p._pos.h < y0 || y > y1) continue;
-        const key = p.slug + "|" + col + "|" + row;
-        if (liveCards.has(key)) continue;
-        const el = buildCard(p, col, row);
-        liveCards.set(key, el); frag.appendChild(el); fresh.push(el);
+    const r0 = Math.floor(y0 / PITCHY), r1 = Math.floor(y1 / PITCHY);
+    for (let col = c0; col <= c1; col++) {
+      for (let row = r0; row <= r1; row++) {
+        const V = VARIANTS[permFor(col, row)];                   // this tile's arrangement
+        const ox = col * PITCHX, oy = row * PITCHY;
+        for (const p of PROJECTS) {
+          const q = V[p._idx];
+          const x = q.x + ox, y = q.y + oy;
+          if (x + p._pos.w < x0 || x > x1 || y + p._pos.h < y0 || y > y1) continue;
+          const key = p.slug + "|" + col + "|" + row;
+          if (liveCards.has(key)) continue;
+          const el = buildCard(p, col, row);
+          liveCards.set(key, el); frag.appendChild(el); fresh.push(el);
+        }
       }
     }
     if (fresh.length) {
