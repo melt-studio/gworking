@@ -100,6 +100,33 @@ function posterFor(file, w, h) {
   return null;
 }
 
+// Canvas thumbnail videos are drawn as small tiles and always muted, so the source bitrate and
+// audio track are pure waste. Re-encode to a modest size with no audio. Slide videos (project
+// pages, shown large and sometimes with sound) are never touched by this.
+function compressThumbVideo(file, w, h) {
+  if (!/\.mp4$/i.test(file)) return null;                 // only re-wrap formats we know are safe
+  const tmp = file.replace(/\.mp4$/i, ".min.mp4");
+  const TARGET = 720;
+  try {
+    const longest = Math.max(w || 0, h || 0);
+    const vf = longest > TARGET
+      ? `scale='if(gt(iw,ih),${TARGET},-2)':'if(gt(iw,ih),-2,${TARGET})'`
+      : "scale=trunc(iw/2)*2:trunc(ih/2)*2";              // h264 needs even dimensions
+    execFileSync(ffmpeg.path, ["-y", "-loglevel", "error", "-i", file,
+      "-vf", vf, "-an",                                    // -an: strip audio, tiles are muted
+      "-c:v", "libx264", "-crf", "30", "-preset", "medium", "-pix_fmt", "yuv420p",
+      "-movflags", "+faststart", tmp]);
+    const before = fs.statSync(file).size, after = fs.statSync(tmp).size;
+    if (after < before) { fs.renameSync(tmp, file); console.log(`    video ${(before/1048576).toFixed(2)}MB -> ${(after/1048576).toFixed(2)}MB`); }
+    else fs.unlinkSync(tmp);                               // never bloat
+    return videoDims(file);
+  } catch (e) {
+    try { fs.unlinkSync(tmp); } catch {}
+    console.warn("  video compress skip", path.basename(file), e.message);
+    return null;
+  }
+}
+
 // Animated GIFs repaint constantly and tank scrolling on phones, so bake a static
 // frame we can serve there instead. Uses the LAST frame (animations usually resolve
 // on their final composed state) via a reverse-then-grab-first trick.
@@ -184,7 +211,11 @@ for (const rec of records) {
     const type = att.type || "";
     if (type.startsWith("video")) {
       const d = videoDims(dest); if (d) { w = d.width; h = d.height; }
-      poster = posterFor(dest, w, h);
+      poster = posterFor(dest, w, h);                       // poster taken from the original, before re-encode
+      if (maxEdge === MAX_THUMB) {                          // canvas tile: shrink it
+        const c = compressThumbVideo(dest, w, h);
+        if (c) { w = c.width; h = c.height; }
+      }
     }
     else if (/\.gif$/i.test(dest) || type === "image/gif") { poster = gifPosterFor(dest); }   // static frame for phones
     else if (maxEdge) {
