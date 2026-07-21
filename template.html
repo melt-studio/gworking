@@ -11,7 +11,8 @@
 <link rel="manifest" href="assets/favicon/site.webmanifest">
 <style>
   :root { --bg:#e8ecf0; --fg:#0E0D0D; --tracking:0.02em;
-          --ease:cubic-bezier(0.65,0,0.35,1); --easein:cubic-bezier(0.33,0,0.2,1); }
+          --ease:cubic-bezier(0.65,0,0.35,1); --easein:cubic-bezier(0.33,0,0.2,1);
+          --slide-ease:cubic-bezier(0.22,0.61,0.36,1); }   /* long, soft settle for the slide reveal */
   * { box-sizing:border-box; margin:0; padding:0; }
   html, body { height:100%; overflow:hidden; }
   body {
@@ -75,7 +76,7 @@
      One animation on the slide (not a second one on the img) keeps it from looking jittery. */
   .slide { flex:0 0 auto; height:100%; background:transparent; position:relative;
     opacity:0; transform:translate3d(0,10px,0);        /* short, purely vertical rise (no sideways drift) */
-    transition:opacity 1.35s var(--easein), transform 1.35s var(--easein); }
+    transition:opacity 1.9s var(--slide-ease), transform 1.9s var(--slide-ease); }
   .slide.in { opacity:1; transform:none; }
   /* image itself is always full strip height, width follows its real rendered aspect -> uniform height, variable width */
   .slide img, .slide video { height:100%; width:auto; display:block; }
@@ -92,7 +93,7 @@
 
   .show-caption { flex:0 0 auto; display:flex; justify-content:space-between; align-items:flex-end;
     gap:48px; padding:0 36px 56px 56px; color:var(--fg); font-size:12px; letter-spacing:var(--tracking);
-    opacity:0; transform:translateY(14px); transition:opacity .85s var(--easein) .45s, transform .85s var(--easein) .45s; }
+    opacity:0; transform:translateY(14px); transition:opacity 1.2s var(--slide-ease) .5s, transform 1.2s var(--slide-ease) .5s; }
   .overlay.active .show-caption { opacity:1; transform:none; }
   .show-caption .meta { max-width:620px; line-height:1.4; }
   .show-caption .nm { display:block; margin-bottom:10px; }
@@ -200,10 +201,10 @@
        back the block settles into position first and the text fades in after it. */
     .show-caption { order:1; flex-direction:column; align-items:flex-start; gap:8px; padding:92px 20px 18px; font-size:12px;
       background:var(--bg);
-      transition:transform .75s var(--easein), margin-top .75s var(--easein), opacity .5s var(--easein); }
-    .show-caption .meta { transition:opacity .3s var(--easein) .4s; }          /* returns after the block lands */
+      transition:transform 1.1s var(--slide-ease), margin-top 1.1s var(--slide-ease); }
+    .show-caption .meta { transition:opacity .55s var(--easein) .6s; }         /* returns after the block lands */
     .show-caption.tuck { transform:translateY(-12px); pointer-events:none; }
-    .show-caption.tuck .meta { opacity:0; transition:opacity .22s var(--easein); }   /* leaves first */
+    .show-caption.tuck .meta { opacity:0; transition:opacity .4s var(--easein); }    /* leaves first */
     .show-caption .meta { max-width:none; }
     .show-caption .num { display:none; }
     /* phone: play/pause sits centred on the clip so tap-to-play is obvious */
