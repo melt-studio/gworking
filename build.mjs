@@ -109,12 +109,18 @@ function compressThumbVideo(file, w, h) {
   const TARGET = 720;
   try {
     const longest = Math.max(w || 0, h || 0);
-    const vf = longest > TARGET
-      ? `scale='if(gt(iw,ih),${TARGET},-2)':'if(gt(iw,ih),-2,${TARGET})'`
-      : "scale=trunc(iw/2)*2:trunc(ih/2)*2";              // h264 needs even dimensions
+    // out_range=pc + explicit BT.709 tags keep flat colours as close to the source as 8-bit YUV
+    // allows. Without them H.264 defaults to limited range (16-235) and a flat background drifts
+    // ~4 levels off the page colour; this halves that. (4:4:4 would be closer still but Safari
+    // and iOS can't hardware-decode it.)
+    const size = longest > TARGET
+      ? `w='if(gt(iw,ih),${TARGET},-2)':h='if(gt(iw,ih),-2,${TARGET})'`
+      : "w=trunc(iw/2)*2:h=trunc(ih/2)*2";                 // h264 needs even dimensions
+    const vf = `scale=${size}:out_range=pc,format=yuv420p`;
     execFileSync(ffmpeg.path, ["-y", "-loglevel", "error", "-i", file,
       "-vf", vf, "-an",                                    // -an: strip audio, tiles are muted
       "-c:v", "libx264", "-crf", "30", "-preset", "medium", "-pix_fmt", "yuv420p",
+      "-color_range", "pc", "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709",
       "-movflags", "+faststart", tmp]);
     const before = fs.statSync(file).size, after = fs.statSync(tmp).size;
     if (after < before) { fs.renameSync(tmp, file); console.log(`    video ${(before/1048576).toFixed(2)}MB -> ${(after/1048576).toFixed(2)}MB`); }
