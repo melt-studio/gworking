@@ -148,7 +148,8 @@ for (const rec of records) {
   // projectThumbnail it ALSO becomes a card on the canvas / a row in the index that opens About
   // (the "secret" link). Leave that attachment empty and it stays hidden exactly as before.
   const isAboutRow = f[F.name] === "About";
-  if (isAboutRow) about = f[F.copy] || "";
+  // only take copy that actually has content — a stray/empty "About" row must never blank the page
+  if (isAboutRow && (f[F.copy] || "").trim()) about = f[F.copy];
   if (isAboutRow && !(f[F.thumb] || [])[0]) continue;
   if (!f[F.name]) continue;
   // unique per record so duplicate project titles never share/overwrite an asset folder
