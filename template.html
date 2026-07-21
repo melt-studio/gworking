@@ -562,9 +562,16 @@
     // the entire site (100+ images, tens of MB) before showing anything — the loader would just be
     // counting that whole download. Everything else streams in behind the reveal / as you pan.
     const V = VARIANTS[0];
-    const pad = 0.25;                                        // a little beyond the frame, so a first nudge is covered
-    const x0 = -targetX - innerWidth * pad,  x1 = -targetX + innerWidth  * (1 + pad);
-    const y0 = -targetY - innerHeight * pad, y1 = -targetY + innerHeight * (1 + pad);
+    let x0, x1, y0, y1;
+    if (introActive) {                                       // the intro opens on a WIDE zoomed-out frame —
+      const s = INTRO_SCALE;                                 // wait for everything visible in it, or it starts empty
+      x0 = -introX0 / s; x1 = x0 + innerWidth / s;
+      y0 = -introY0 / s; y1 = y0 + innerHeight / s;
+    } else {                                                 // phone: no zoom, just the opening frame + a nudge
+      const pad = 0.25;
+      x0 = -targetX - innerWidth * pad;  x1 = -targetX + innerWidth  * (1 + pad);
+      y0 = -targetY - innerHeight * pad; y1 = -targetY + innerHeight * (1 + pad);
+    }
     const urls = [];
     PROJECTS.forEach(p => {
       const m = p.thumb; if (!m) return;

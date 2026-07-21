@@ -114,16 +114,37 @@ function gifPosterFor(file) {
 // Quality-first image optimization. Only DOWNSCALES files past the ceiling
 // (single high-quality Lanczos resample + near-lossless encode). Files already
 // within budget are left exactly as uploaded — no re-compression, no quality loss.
-async function optimizeImage(file, maxEdge) {
+async function optimizeImage(file, maxEdge, isThumb) {
   const ext = path.extname(file).toLowerCase();
   if (![".jpg", ".jpeg", ".png", ".webp"].includes(ext)) return null;  // skip gif/mp4/etc
   try {
     const meta = await sharp(file).metadata();
     const longest = Math.max(meta.width || 0, meta.height || 0);
     const needResize = longest > maxEdge;
-    // JPEGs within budget: leave untouched to avoid generation loss.
-    if ((ext === ".jpg" || ext === ".jpeg") && !needResize) return { width: meta.width, height: meta.height };
 
+    // THUMBNAILS: drawn as small tiles on the canvas and they gate the first paint, so compress
+    // hard. Opaque images become JPEG (a lossless PNG tile can be 15x bigger for no visible gain);
+    // images with real transparency stay PNG but get quantised. Slide images are untouched below.
+    if (isThumb) {
+      const opaque = !meta.hasAlpha;
+      let p = sharp(file, { failOn: "none" })
+        .resize(maxEdge, maxEdge, { fit: "inside", withoutEnlargement: true, kernel: "lanczos3" });
+      let outFile = file;
+      if (ext === ".png" && !opaque) {
+        p = p.png({ compressionLevel: 9, palette: true, quality: 80 });
+      } else {
+        p = p.jpeg({ quality: 80, mozjpeg: true });
+        outFile = file.replace(/\.[^.]+$/, ".jpg");
+      }
+      const buf = await p.toBuffer();
+      const fin = await sharp(buf).metadata();
+      fs.writeFileSync(outFile, buf);
+      if (outFile !== file) { try { fs.unlinkSync(file); } catch {} }
+      return { width: fin.width, height: fin.height, file: outFile };
+    }
+
+    // SLIDES: quality-first. Only downscale past the ceiling; never re-compress a JPEG in budget.
+    if ((ext === ".jpg" || ext === ".jpeg") && !needResize) return { width: meta.width, height: meta.height };
     let p = sharp(file, { failOn: "none" });
     if (needResize) p = p.resize(maxEdge, maxEdge, { fit: "inside", withoutEnlargement: true, kernel: "lanczos3" });
     if (ext === ".png")       p = p.png({ compressionLevel: 9 });                                  // lossless
@@ -157,7 +178,7 @@ for (const rec of records) {
   const folder = path.join(ASSETS, slug);
 
   async function media(att, fname, maxEdge) {
-    const dest = path.join(folder, fname);
+    let dest = path.join(folder, fname);
     await download(att.url, dest);
     let w = att.width, h = att.height, poster;
     const type = att.type || "";
@@ -166,7 +187,10 @@ for (const rec of records) {
       poster = posterFor(dest, w, h);
     }
     else if (/\.gif$/i.test(dest) || type === "image/gif") { poster = gifPosterFor(dest); }   // static frame for phones
-    else if (maxEdge) { const d = await optimizeImage(dest, maxEdge); if (d) { w = d.width; h = d.height; } }
+    else if (maxEdge) {
+      const d = await optimizeImage(dest, maxEdge, maxEdge === MAX_THUMB);
+      if (d) { w = d.width; h = d.height; if (d.file) dest = d.file; }   // thumbnails may become .jpg
+    }
     const rel = path.relative(OUT, dest).split(path.sep).join("/");
     const out = { file: ver(rel), type, w, h };
     if (poster) out.poster = ver(poster);
