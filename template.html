@@ -70,12 +70,15 @@
     padding:72px 80px 40px 56px; min-height:0; scrollbar-width:none; }
   .show-strip.single { justify-content:center; }
   .show-strip::-webkit-scrollbar { display:none; }
-  .slide { flex:0 0 auto; height:100%; background:transparent; position:relative; }
+  /* Every viewport uses the same reveal: each image rises into position and fades as it scrolls
+     into view — and only once its file has actually decoded, so nothing ever pops in half-loaded.
+     One animation on the slide (not a second one on the img) keeps it from looking jittery. */
+  .slide { flex:0 0 auto; height:100%; background:transparent; position:relative;
+    opacity:0; transform:translate3d(0,10px,0);        /* short, purely vertical rise (no sideways drift) */
+    transition:opacity 1.35s var(--easein), transform 1.35s var(--easein); }
+  .slide.in { opacity:1; transform:none; }
   /* image itself is always full strip height, width follows its real rendered aspect -> uniform height, variable width */
   .slide img, .slide video { height:100%; width:auto; display:block; }
-  .slide img { opacity:0; transition:opacity .4s var(--easein); }
-  .slide img.ld { opacity:1; }
-  .overlay.active .slide { animation: fadeUp .55s var(--easein) backwards; }
   .vtoggle { position:absolute; left:12px; bottom:12px; width:34px; height:34px; border:none; border-radius:50%;
     background:rgba(0,0,0,.45); color:#fff; cursor:pointer; font-size:12px; line-height:34px; text-align:center; padding:0;
     display:flex; align-items:center; justify-content:center; transition:background .2s ease; }
@@ -89,7 +92,7 @@
 
   .show-caption { flex:0 0 auto; display:flex; justify-content:space-between; align-items:flex-end;
     gap:48px; padding:0 36px 56px 56px; color:var(--fg); font-size:12px; letter-spacing:var(--tracking);
-    opacity:0; transform:translateY(14px); transition:opacity .6s var(--easein) .4s, transform .6s var(--easein) .4s; }
+    opacity:0; transform:translateY(14px); transition:opacity .85s var(--easein) .45s, transform .85s var(--easein) .45s; }
   .overlay.active .show-caption { opacity:1; transform:none; }
   .show-caption .meta { max-width:620px; line-height:1.4; }
   .show-caption .nm { display:block; margin-bottom:10px; }
@@ -192,14 +195,15 @@
     .show-strip.single { justify-content:flex-start; }
     .slide { height:auto; width:100%; aspect-ratio:auto; }
     .slide img, .slide video { width:100%; height:auto; max-height:none; }
-    /* phone: each image rises + fades as it scrolls into view (the slide owns the reveal, so no double-fade jitter) */
-    .overlay.active .slide { animation:none; opacity:0; transform:translateY(20px);
-      transition:opacity .55s var(--easein), transform .55s var(--easein); }
-    .overlay.active .slide.in { opacity:1; transform:none; }
-    .slide img { opacity:1; transition:none; }
+    /* The caption is an opaque block so the copy never ghosts over the images mid-move. Text and
+       block are separate: on the way out the text fades first and the block follows; on the way
+       back the block settles into position first and the text fades in after it. */
     .show-caption { order:1; flex-direction:column; align-items:flex-start; gap:8px; padding:92px 20px 18px; font-size:12px;
-      transition:transform .4s var(--easein), opacity .4s var(--easein), margin-top .4s var(--easein); }
-    .show-caption.tuck { transform:translateY(-14px); opacity:0; pointer-events:none; }
+      background:var(--bg);
+      transition:transform .75s var(--easein), margin-top .75s var(--easein), opacity .5s var(--easein); }
+    .show-caption .meta { transition:opacity .3s var(--easein) .4s; }          /* returns after the block lands */
+    .show-caption.tuck { transform:translateY(-12px); pointer-events:none; }
+    .show-caption.tuck .meta { opacity:0; transition:opacity .22s var(--easein); }   /* leaves first */
     .show-caption .meta { max-width:none; }
     .show-caption .num { display:none; }
     /* phone: play/pause sits centred on the clip so tap-to-play is obvious */
@@ -652,7 +656,26 @@
   const capDesc = document.getElementById("capDesc");
   const capClient = document.getElementById("capClient");
   const capNum = document.getElementById("capNum");
-  let showCount = 0, single = false, slideIO = null;
+  let showCount = 0, single = false, firstReveal = true;
+
+  /* A slide reveals once it is BOTH scrolled into view AND its image has decoded — that's what
+     stops the half-loaded pop-in. Visibility is measured straight off the strip rather than with
+     an IntersectionObserver root, which is unreliable on a horizontally-scrolling flex container. */
+  const tryIn = (s) => { if (s.dataset.ready && s.dataset.seen) s.classList.add("in"); };
+  function revealSlides() {
+    const r = strip.getBoundingClientRect();
+    let n = 0;
+    strip.querySelectorAll(".slide").forEach(s => {
+      if (s.dataset.seen) return;
+      const b = s.getBoundingClientRect();
+      if (b.right < r.left + 24 || b.left > r.right - 24 || b.bottom < r.top + 24 || b.top > r.bottom - 24) return;
+      // opening screenful cascades in; ones you scroll to get a small beat before they rise
+      s.style.transitionDelay = firstReveal ? (n++ * 0.15) + "s" : "0.18s";
+      s.dataset.seen = "1"; tryIn(s);
+      setTimeout(() => { s.dataset.ready = "1"; tryIn(s); }, 1500);    // never leave a blank slot
+    });
+    if (n) firstReveal = false;
+  }
 
   // copy links (target = a project's "ref"/name, or an http(s) URL):
   //   WORD[target]            -> the single word links            e.g.  BILLIONS[billions66]
@@ -696,19 +719,23 @@
       const a = aspectOf(m, 1.5);
       // phone: don't autoplay (unreliable on iOS and heavy) — show the poster with a centred tap-to-play
       const ph = innerWidth <= 768;
+      // width/height attributes reserve the slide's width BEFORE the file loads. Without them a
+      // slide is 0px wide until decode and then snaps out, shunting every later slide sideways —
+      // which reads as the images drifting horizontally while they animate in.
+      const dim = (m.w && m.h) ? ` width="${m.w}" height="${m.h}"` : "";
       const inner = isVideo(m)
-        ? `<video src="${m.file}"${ph ? ' preload="none"' : " autoplay"} loop muted playsinline${m.poster ? ` poster="${m.poster}"` : ""}></video><button class="vtoggle" aria-label="Play/pause">${ph ? PLAY : PAUSE}</button><button class="atoggle" aria-label="Sound" hidden>${SND_OFF}</button>`
-        : `<img src="${m.file}" alt="" loading="lazy" onload="this.classList.add('ld')">`;
+        ? `<video src="${m.file}"${dim}${ph ? ' preload="none"' : " autoplay"} loop muted playsinline${m.poster ? ` poster="${m.poster}"` : ""}></video><button class="vtoggle" aria-label="Play/pause">${ph ? PLAY : PAUSE}</button><button class="atoggle" aria-label="Sound" hidden>${SND_OFF}</button>`
+        : `<img src="${m.file}"${dim} alt="" loading="lazy" onload="this.classList.add('ld')">`;
       return `<div class="slide" style="--aspect:${a};">${inner}</div>`;
     }).join("");
-    strip.querySelectorAll("img").forEach(im => { if (im.complete && im.naturalWidth) im.classList.add("ld"); });
-    if (slideIO) { slideIO.disconnect(); slideIO = null; }
-    if (innerWidth <= 768) {                       // phone: rise+fade each image as it scrolls into view
-      slideIO = new IntersectionObserver((es) => {
-        es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); slideIO.unobserve(e.target); } });
-      }, { root: strip, rootMargin: "0px 0px -6% 0px", threshold: 0.06 });
-      strip.querySelectorAll(".slide").forEach(s => slideIO.observe(s));
-    }
+    // mark each slide ready as soon as its image has decoded (videos are ready immediately — poster)
+    strip.querySelectorAll(".slide").forEach(s => {
+      const im = s.querySelector("img");
+      if (!im || (im.complete && im.naturalWidth)) s.dataset.ready = "1";
+      else im.addEventListener("load", () => { s.dataset.ready = "1"; tryIn(s); }, { once: true });
+    });
+    firstReveal = true;
+    requestAnimationFrame(() => requestAnimationFrame(revealSlides));   // once the overlay has laid out
     strip.querySelectorAll(".slide video").forEach(v => {              // reveal the sound button only when the clip actually has audio
       const aBtn = v.parentElement.querySelector(".atoggle"); if (!aBtn) return;
       const check = () => { if (hasAudio(v)) aBtn.hidden = false; };
@@ -743,6 +770,7 @@
     else strip.scrollBy({ left: dir * strip.clientWidth * 0.8, behavior: "smooth" });
   }
   strip.addEventListener("scroll", updateNum, { passive: true });
+  strip.addEventListener("scroll", revealSlides, { passive: true });   // images rise in as you scroll
   // mobile: copy folds up once you scroll into the images — driven by scroll POSITION (not direction),
   // with hysteresis so it can't flicker at the threshold. folds off even with only 1-2 images.
   strip.addEventListener("scroll", () => {
