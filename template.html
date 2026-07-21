@@ -558,8 +558,21 @@
     if (introActive) startReveal();            // desktop/laptop: begin the zoom as it fades (mobile is already visible)
   }
   function preloadThumbs() {                   // count 0-100 against real thumbnail-load progress, then reveal
+    // Only wait for the thumbnails on the OPENING screen. Waiting for all of them means downloading
+    // the entire site (100+ images, tens of MB) before showing anything — the loader would just be
+    // counting that whole download. Everything else streams in behind the reveal / as you pan.
+    const V = VARIANTS[0];
+    const pad = 0.25;                                        // a little beyond the frame, so a first nudge is covered
+    const x0 = -targetX - innerWidth * pad,  x1 = -targetX + innerWidth  * (1 + pad);
+    const y0 = -targetY - innerHeight * pad, y1 = -targetY + innerHeight * (1 + pad);
     const urls = [];
-    PROJECTS.forEach(p => { const m = p.thumb; if (!m) return; const u = (isVideo(m) && m.poster) ? m.poster : m.file; if (u) urls.push(u); });
+    PROJECTS.forEach(p => {
+      const m = p.thumb; if (!m) return;
+      const q = V[p._idx];
+      if (q.x + q.w < x0 || q.x > x1 || q.y + q.h < y0 || q.y > y1) return;   // not on the opening screen
+      const u = (isVideo(m) && m.poster) ? m.poster : m.file;
+      if (u) urls.push(u);
+    });
     const total = urls.length || 1;
     let loaded = urls.length ? 0 : total;
     urls.forEach(u => { const im = new Image(); im.onload = im.onerror = () => { loaded++; }; im.src = u; });
