@@ -10,7 +10,7 @@ import crypto from "node:crypto";
 
 // retina-safe ceilings (longest edge, px). Files within these are left untouched.
 const MAX_THUMB = 1200;
-const MAX_SLIDE = 2560;
+const MAX_SLIDE = 2200;
 
 const TOKEN = process.env.AIRTABLE_TOKEN;
 const BASE  = process.env.AIRTABLE_BASE_ID || "appJ5XFh9jxMVKJYA";
@@ -176,18 +176,23 @@ async function optimizeImage(file, maxEdge, isThumb) {
       return { width: fin.width, height: fin.height, file: outFile };
     }
 
-    // SLIDES: quality-first. Only downscale past the ceiling; never re-compress a JPEG in budget.
-    if ((ext === ".jpg" || ext === ".jpeg") && !needResize) return { width: meta.width, height: meta.height };
-    let p = sharp(file, { failOn: "none" });
-    if (needResize) p = p.resize(maxEdge, maxEdge, { fit: "inside", withoutEnlargement: true, kernel: "lanczos3" });
-    if (ext === ".png")       p = p.png({ compressionLevel: 9 });                                  // lossless
-    else if (ext === ".webp") p = p.webp({ quality: 92 });
-    else                      p = p.jpeg({ quality: 92, mozjpeg: true, chromaSubsampling: "4:4:4" }); // full chroma
+    // SLIDES: project-page images, shown large but scrolled past quickly. Compress meaningfully
+    // (q84 mozjpeg, cap the longest edge) — still high quality on screen, ~70% lighter than the
+    // untouched originals that were bloating page loads. PNGs with transparency stay lossless.
+    let p = sharp(file, { failOn: "none" })
+      .resize(maxEdge, maxEdge, { fit: "inside", withoutEnlargement: true, kernel: "lanczos3" });
+    if (ext === ".png" && meta.hasAlpha) p = p.png({ compressionLevel: 9 });
+    else if (ext === ".webp")            p = p.webp({ quality: 85 });
+    else if (ext === ".png")             { p = p.jpeg({ quality: 84, mozjpeg: true }); }  // opaque png -> jpeg
+    else                                 p = p.jpeg({ quality: 84, mozjpeg: true });
 
     const buf = await p.toBuffer();
     const fin = await sharp(buf).metadata();
-    if (needResize || buf.length < fs.statSync(file).size) fs.writeFileSync(file, buf);  // never bloat
-    return { width: fin.width, height: fin.height };
+    let outFile = file;
+    if (ext === ".png" && !meta.hasAlpha) { outFile = file.replace(/\.[^.]+$/, ".jpg"); }
+    fs.writeFileSync(outFile, buf);
+    if (outFile !== file) { try { fs.unlinkSync(file); } catch {} }
+    return { width: fin.width, height: fin.height, file: outFile !== file ? outFile : undefined };
   } catch (e) { console.warn("  optimize skip", path.basename(file), e.message); return null; }
 }
 

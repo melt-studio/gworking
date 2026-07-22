@@ -80,6 +80,9 @@
   .slide.in { opacity:1; transform:none; }
   /* image itself is always full strip height, width follows its real rendered aspect -> uniform height, variable width */
   .slide img, .slide video { height:100%; width:auto; display:block; }
+  /* the box rises on scroll; the image fades in within it once decoded, so a slow file never pops */
+  .slide img { opacity:0; transition:opacity .9s var(--easein); }
+  .slide img.ld { opacity:1; }
   .vtoggle { position:absolute; left:12px; bottom:12px; width:34px; height:34px; border:none; border-radius:50%;
     background:rgba(0,0,0,.45); color:#fff; cursor:pointer; font-size:12px; line-height:34px; text-align:center; padding:0;
     display:flex; align-items:center; justify-content:center; transition:background .2s ease; }
@@ -171,8 +174,11 @@
   .m-client, .m-note { line-height:1.35; }
   .m-note { margin-left:22px; }   /* extra breathing room between client and copyOverview */
   @keyframes fadeDown { from { opacity:1; transform:none; } to { opacity:0; transform:translateY(14px); } }
-  .overlay.active .mrow  { animation:fadeUp   .5s var(--easein) backwards; animation-delay:calc(0.04s + var(--i,0) * 0.035s); }
-  .overlay.closing .mrow { animation:fadeDown .4s var(--easein) forwards;  animation-delay:calc(var(--i,0) * 0.02s); }
+  /* stagger is CAPPED (min) so the cascade lasts the same ~0.4s whether there are 10 rows or 100 —
+     rows past the first screenful are off-screen anyway, so they don't need their own delay */
+  .overlay.active .mrow  { animation:fadeUp   .45s var(--easein) backwards; animation-delay:calc(0.03s + min(var(--i,0), 12) * 0.028s); }
+  .overlay.closing .mrow { animation:fadeDown .35s var(--easein) forwards;  animation-delay:calc(min(var(--i,0), 12) * 0.016s); }
+  #menu.active { transition:opacity .3s var(--easein); }   /* the index panel itself snaps in fast */
 
   @media (max-width:768px) {
     /* phone only: cards ease in as they come into range (smooths fast panning + slow decodes) */
@@ -659,10 +665,9 @@
   const capNum = document.getElementById("capNum");
   let showCount = 0, single = false, firstReveal = true;
 
-  /* A slide reveals once it is BOTH scrolled into view AND its image has decoded — that's what
-     stops the half-loaded pop-in. Visibility is measured straight off the strip rather than with
-     an IntersectionObserver root, which is unreliable on a horizontally-scrolling flex container. */
-  const tryIn = (s) => { if (s.dataset.ready && s.dataset.seen) s.classList.add("in"); };
+  /* Each slide rises + fades as it scrolls into view (the image fades in separately once decoded,
+     so nothing pops half-loaded). Visibility is measured straight off the strip rather than with an
+     IntersectionObserver root, which is unreliable on a horizontally-scrolling flex container. */
   function revealSlides() {
     const r = strip.getBoundingClientRect();
     let n = 0;
@@ -671,9 +676,8 @@
       const b = s.getBoundingClientRect();
       if (b.right < r.left + 24 || b.left > r.right - 24 || b.bottom < r.top + 24 || b.top > r.bottom - 24) return;
       // opening screenful cascades in; ones you scroll to get a small beat before they rise
-      s.style.transitionDelay = firstReveal ? (n++ * 0.15) + "s" : "0.18s";
-      s.dataset.seen = "1"; tryIn(s);
-      setTimeout(() => { s.dataset.ready = "1"; tryIn(s); }, 1500);    // never leave a blank slot
+      s.style.transitionDelay = firstReveal ? (n++ * 0.15) + "s" : "0.12s";
+      s.dataset.seen = "1"; s.classList.add("in");
     });
     if (n) firstReveal = false;
   }
@@ -729,12 +733,7 @@
         : `<img src="${m.file}"${dim} alt="" loading="lazy" onload="this.classList.add('ld')">`;
       return `<div class="slide" style="--aspect:${a};">${inner}</div>`;
     }).join("");
-    // mark each slide ready as soon as its image has decoded (videos are ready immediately — poster)
-    strip.querySelectorAll(".slide").forEach(s => {
-      const im = s.querySelector("img");
-      if (!im || (im.complete && im.naturalWidth)) s.dataset.ready = "1";
-      else im.addEventListener("load", () => { s.dataset.ready = "1"; tryIn(s); }, { once: true });
-    });
+    strip.querySelectorAll("img").forEach(im => { if (im.complete && im.naturalWidth) im.classList.add("ld"); });
     firstReveal = true;
     requestAnimationFrame(() => requestAnimationFrame(revealSlides));   // once the overlay has laid out
     strip.querySelectorAll(".slide video").forEach(v => {              // reveal the sound button only when the clip actually has audio
