@@ -36,14 +36,14 @@
 
   /* loader: centred 0-100 count that masks the cold load, then hands off to the intro zoom */
   .loader { position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center;
-    background:var(--bg); color:var(--fg); font-size:14px; letter-spacing:var(--tracking);
+    background:var(--bg); color:var(--fg); font-size:15px; letter-spacing:var(--tracking);
     transition:opacity .6s var(--ease); }
   .loader.done { opacity:0; pointer-events:none; }
 
-  .hud { position:fixed; z-index:10; font-size:13px; letter-spacing:var(--tracking); line-height:1.4; color:var(--fg); }
+  .hud { position:fixed; z-index:10; font-size:14px; letter-spacing:var(--tracking); line-height:1.4; color:var(--fg); }
   .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; z-index:115; }  /* header upper-left, always on top + clickable */
   .hud-tr { top:30px; right:36px; height:30px; display:flex; align-items:center; }   /* matches X */
-  .hud-bl { bottom:24px; left:34px; font-size:11px; }   /* copyright credit, a touch smaller than the main copy */
+  .hud-bl { bottom:24px; left:34px; font-size:12px; }   /* copyright credit, a touch smaller than the main copy */
   .hud-br { bottom:24px; right:36px; text-align:right; }
   .hud-tl, .hud-tr, .hud-bl { animation: fadeUp .7s var(--easein) .5s backwards; }   /* text in after images */
   .hud-tr { transition: opacity .35s var(--easein); }                                /* close: ABOUT fades back fast */
@@ -84,7 +84,7 @@
   .slide img { opacity:0; transition:opacity .9s var(--easein); }
   .slide img.ld { opacity:1; }
   .vtoggle { position:absolute; left:12px; bottom:12px; width:34px; height:34px; border:none; border-radius:50%;
-    background:rgba(0,0,0,.45); color:#fff; cursor:pointer; font-size:13px; line-height:34px; text-align:center; padding:0;
+    background:rgba(0,0,0,.45); color:#fff; cursor:pointer; font-size:14px; line-height:34px; text-align:center; padding:0;
     display:flex; align-items:center; justify-content:center; transition:background .2s ease; }
   .vtoggle:hover { background:rgba(0,0,0,.7); }
   .vtoggle svg { width:13px; height:13px; fill:#fff; }
@@ -95,7 +95,7 @@
   .atoggle svg { width:15px; height:15px; fill:#fff; }
 
   .show-caption { flex:0 0 auto; display:flex; justify-content:space-between; align-items:flex-end;
-    gap:48px; padding:0 36px 56px 56px; color:var(--fg); font-size:13px; letter-spacing:var(--tracking);
+    gap:48px; padding:0 36px 56px 56px; color:var(--fg); font-size:14px; letter-spacing:var(--tracking);
     opacity:0; transform:translateY(14px); transition:opacity 1.2s var(--slide-ease) .5s, transform 1.2s var(--slide-ease) .5s; }
   .overlay.active .show-caption { opacity:1; transform:none; }
   .show-caption .meta { max-width:620px; line-height:1.4; }
@@ -107,7 +107,7 @@
   .clink:hover { opacity:.5; }
 
   /* ===== ABOUT ===== */
-  .about-inner { margin:auto; max-width:720px; padding:40px; font-size:13px; letter-spacing:var(--tracking); line-height:1.6;
+  .about-inner { margin:auto; max-width:720px; padding:40px; font-size:14px; letter-spacing:var(--tracking); line-height:1.6;
     opacity:0; transform:translateY(12px); transition:opacity .6s var(--easein) .1s, transform .6s var(--easein) .1s; }
   .overlay.active .about-inner { opacity:1; transform:none; }
   .about-inner .a-name { display:block; margin-bottom:22px; }
@@ -162,13 +162,17 @@
   /* scope takes the leftover width so a full comma list fits on one line; count sits at the far right */
   .mrow { display:grid; grid-template-columns:minmax(180px,300px) minmax(100px,150px) 1fr auto;
     align-items:center; gap:28px; padding:16px 2px; border-bottom:1px solid var(--fg);
-    cursor:pointer; color:var(--fg); font-size:13px; letter-spacing:var(--tracking);
+    cursor:pointer; color:var(--fg); font-size:14px; letter-spacing:var(--tracking);
     overflow:hidden; max-height:200px;
-    transition:opacity .3s var(--ease), max-height .45s var(--ease), padding .45s var(--ease), border-color .45s var(--ease); }
-  .mrow:hover { opacity:.5; }
+    transition:color .3s var(--ease), opacity .3s var(--ease), max-height .45s var(--ease), padding .45s var(--ease), border-color .45s var(--ease); }
+  /* hover greys the row's TEXT (via colour, not opacity — so a hovered scope can come back to full
+     black while the rest of the line stays grey; opacity stays free for the filter collapse) */
+  .mrow:hover { color:rgba(14,13,13,.42); }
+  .mrow:hover .mtag:hover { color:var(--fg); }          /* the specific scope you're over goes back to black */
   /* filtered-out rows fade then collapse, so the remaining list slides together */
   .mrow.hide { opacity:0; max-height:0; padding-top:0; padding-bottom:0; border-bottom-color:transparent; pointer-events:none; }
-  .mtag { cursor:pointer; }
+  .mtag { cursor:pointer; transition:color .2s var(--ease); }
+  .mtag.on { color:var(--fg); }                          /* an active/filtered scope stays black */
   .mtag:hover, .mtag.on { text-decoration:underline; text-underline-offset:2px; }
   .m-num { text-align:right; white-space:nowrap; }
   .m-client, .m-note { line-height:1.35; }
@@ -184,14 +188,14 @@
     /* phone only: cards ease in as they come into range (smooths fast panning + slow decodes) */
     .card-wrap { opacity:0; transition:left .55s var(--ease), top .55s var(--ease), opacity .5s var(--easein); }
     .card-wrap.shown { opacity:1; }
-    .hud { font-size:13px; }
+    .hud { font-size:14px; }
     .menu-inner { padding:88px 20px 48px; scrollbar-width:none; }
     .menu-inner::-webkit-scrollbar { display:none; }   /* mobile: overlay scroll, no gutter -> clean edges */
     /* two lines: [name | client] then [overview] underneath the title */
-    .mrow { grid-template-columns:1fr auto; column-gap:16px; row-gap:3px; padding:11px 0; font-size:13px; align-items:baseline; }
+    .mrow { grid-template-columns:1fr auto; column-gap:16px; row-gap:3px; padding:11px 0; font-size:14px; align-items:baseline; }
     .m-name { grid-column:1; grid-row:1; }
     .m-client { grid-column:2; grid-row:1; justify-self:end; text-align:right; opacity:.7; margin-left:0; }
-    .m-note { grid-column:1 / -1; grid-row:2; opacity:.7; margin-left:0; font-size:12px; }   /* scope tags held a touch smaller on phone so they don't get unwieldy */
+    .m-note { grid-column:1 / -1; grid-row:2; opacity:.7; margin-left:0; font-size:13px; }   /* scope tags held a touch smaller on phone so they don't get unwieldy */
     .m-num { display:none; }
     .hud-tl { left:20px; height:auto; max-width:70vw; line-height:1.35; align-items:flex-start; }   /* upper-left, aligned with list edge */
     .hud-tr { right:20px; align-items:flex-start; height:auto; line-height:1.35; }
@@ -205,7 +209,7 @@
     /* The caption is an opaque block so the copy never ghosts over the images mid-move. Text and
        block are separate: on the way out the text fades first and the block follows; on the way
        back the block settles into position first and the text fades in after it. */
-    .show-caption { order:1; flex-direction:column; align-items:flex-start; gap:8px; padding:92px 20px 18px; font-size:13px;
+    .show-caption { order:1; flex-direction:column; align-items:flex-start; gap:8px; padding:92px 20px 18px; font-size:14px;
       background:var(--bg);
       transition:transform 1.1s var(--slide-ease), margin-top 1.1s var(--slide-ease); }
     .show-caption .meta { transition:opacity .55s var(--easein) .6s; }         /* returns after the block lands */
@@ -216,15 +220,15 @@
     /* phone: play/pause sits centred on the clip so tap-to-play is obvious */
     .vtoggle { left:50%; top:50%; bottom:auto; transform:translate(-50%,-50%); width:54px; height:54px; }
     .vtoggle svg { width:20px; height:20px; }
-    .about-inner { max-width:none; padding:88px 24px 48px; font-size:13px; }
+    .about-inner { max-width:none; padding:88px 24px 48px; font-size:14px; }
   }
   /* laptop only: 1px smaller type overall + tighter project-page padding so slideshow images run larger */
   @media (min-width:769px) and (max-width:1799px) {
-    .hud { font-size:12px; }
-    .mrow { font-size:12px; }                          /* list copy matches the rest of the laptop type */
+    .hud { font-size:13px; }
+    .mrow { font-size:13px; }                          /* list copy matches the rest of the laptop type */
     .show-strip { padding:66px 80px 24px 56px; }        /* clear the top-right X (no overlap on the image) */
-    .show-caption { font-size:12px; padding:0 36px 30px 56px; }  /* was 56px bottom */
-    .about-inner { font-size:12px; }
+    .show-caption { font-size:13px; padding:0 36px 30px 56px; }  /* was 56px bottom */
+    .about-inner { font-size:13px; }
   }
 </style>
 </head>
