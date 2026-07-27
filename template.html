@@ -408,11 +408,12 @@
     const H = clusterH + restH;
 
     const pos = new Array(N);
-    // place the highlights grid at the top-left (anchor = About at cell 0)
+    // place the highlights grid at the top-left (anchor = About at cell 0) — rows top-aligned with only
+    // a small nudge so it reads as a tidy loose grid, not a scattered mess
     cluster.forEach((p, i) => {
       const c = i % COLS, r = Math.floor(i / COLS);
-      const dx = jit(p.slug + "x") * JIT, dy = jit(p.slug + "y") * clGapY * 0.35;
-      pos[p._idx] = { x: c * cellW + dx, y: r * cellH + (cellH - clGapY - p._s.h) / 2 + dy, w: p._s.w, h: p._s.h };
+      const dx = jit(p.slug + "x") * JIT * 0.45, dy = jit(p.slug + "y") * clGapY * 0.1;
+      pos[p._idx] = { x: c * cellW + dx, y: r * cellH + dy, w: p._s.w, h: p._s.h };
     });
     // place the rest in balanced rows below the highlights
     let y = clusterH;
