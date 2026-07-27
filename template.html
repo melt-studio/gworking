@@ -152,6 +152,13 @@
   .roll:hover > span:nth-child(1), a:hover .roll > span:nth-child(1) { transform:translateY(-100%); opacity:0; }
   .roll:hover > span:nth-child(2), a:hover .roll > span:nth-child(2) { transform:translateY(-100%); opacity:1; }
   body.about-open .nav, body.show-open .nav, body.menu-open .nav { opacity:0; pointer-events:none; }   /* hide words when a view is open */
+  /* shuffle icon sits just right of INDEX; spins once on click, re-randomises the whole canvas */
+  .shuffle { display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; padding:0; margin:0; border:none; background:none; cursor:pointer; color:var(--fg); }
+  .shuffle svg { width:14px; height:14px; display:block; transition:opacity .3s var(--ease); }
+  .shuffle:hover svg { opacity:.5; }
+  .shuffle.spin svg { animation:spin360 .6s var(--soft); }
+  @keyframes spin360 { from { transform:rotate(0); } to { transform:rotate(360deg); } }
+  body.about-open .shuffle, body.show-open .shuffle, body.menu-open .shuffle { opacity:0; pointer-events:none; }   /* hide when a view is open */
   /* close × — strokes draw in from the centre when a view opens, spin a quarter-turn + fade to grey on hover */
   .closex { position:absolute; right:0; top:50%; margin-top:-10px; width:20px; height:20px; padding:0; border:none; background:none;
     cursor:pointer; opacity:0; pointer-events:none; transition:opacity .5s var(--soft), transform .35s var(--soft); }
@@ -256,6 +263,7 @@
 <div class="hud hud-tr">
   <span class="nav" id="aboutBtn"><span class="roll"><span>ABOUT</span><span aria-hidden="true">ABOUT</span></span></span>
   <span class="nav" id="indexBtn"><span class="roll"><span>INDEX</span><span aria-hidden="true">INDEX</span></span></span>
+  <button class="shuffle" id="shuffleBtn" aria-label="Shuffle projects" title="Shuffle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="M4 4l5 5"/></svg></button>
   <button class="closex" id="closeBtn" aria-label="Close"><span></span><span></span></button>
 </div>
 <div class="hud hud-bl">PROJECTS © 2026</div>
@@ -385,8 +393,8 @@
     // tighter than the loose field so ~3 sit across and the 2nd row peeks into view
     const clGapX = HGAP * 0.5, clGapY = VGAP * 0.5;
     const cellW = cW + clGapX, cellH = cH + clGapY;
-    const clRows = Math.max(1, Math.ceil(cluster.length / COLS));
-    const clusterW = Math.min(cluster.length, COLS) * cellW - clGapX;
+    const clRows = cluster.length ? Math.ceil(cluster.length / COLS) : 0;   // 0 when shuffled -> pure loose field
+    const clusterW = cluster.length ? Math.min(cluster.length, COLS) * cellW - clGapX : 0;
     const clusterH = clRows * cellH;                    // trailing gap doubles as the space before the rest
 
     // ---- REST: the original balanced-row layout, packed below the cluster ----
@@ -528,13 +536,25 @@
     });
   }
 
+  // Reshuffle EVERYTHING (featured cluster included) into a fresh loose arrangement, then re-home.
+  function reshuffle() {
+    for (let i = PROJECTS.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [PROJECTS[i], PROJECTS[j]] = [PROJECTS[j], PROJECTS[i]]; }
+    PROJECTS.forEach(p => p._open = false);            // drop the cluster -> highlights mix into the field too
+    TILE = layout(); PITCHX = TILE.w + HGAP; PITCHY = TILE.h;
+    liveCards.forEach(el => el.remove()); liveCards.clear();
+    _cullX = _cullY = _cullS = NaN;
+    const h = homeXY();
+    velocityX = velocityY = 0; targetX = canvasX = h.x; targetY = canvasY = h.y;
+    canvas.style.transform = `translate3d(${canvasX}px, ${canvasY}px, 0) scale(1)`;
+    updateCards(true);
+  }
+
   /* ---- DRAG: crisp 1:1 while held, smooth drift on release ---- */
   const viewport = document.getElementById("viewport");
-  const _first = PROJECTS[0]._pos;
-  const HOME_X = Math.round(-70 - _first.x);                             // first project cropped slightly off the left edge
-  const HOME_Y = Math.round(-45 - _first.y);                             // first row crops at the top edge (hint of more above)
-  let targetX = HOME_X;
-  let targetY = HOME_Y;
+  // opening framing: first card cropped slightly off the top-left (recomputed after a reshuffle)
+  function homeXY() { const f = PROJECTS[0]._pos; return { x: Math.round(-70 - f.x), y: Math.round(-45 - f.y) }; }
+  let targetX = homeXY().x;
+  let targetY = homeXY().y;
   let canvasX = targetX, canvasY = targetY;
   let isDragging = false, startX = 0, startY = 0, dragStartX = 0, dragStartY = 0, dragDistance = 0;
   let velocityX = 0, velocityY = 0, lastX = 0, lastY = 0, lastT = 0;
@@ -848,7 +868,11 @@
   document.getElementById("aboutBtn").addEventListener("mousedown", e => e.stopPropagation());
   // header returns the canvas to the opening framing (the rAF FOLLOW lerp eases it home)
   document.getElementById("homeBtn").addEventListener("mousedown", e => e.stopPropagation());
-  document.getElementById("homeBtn").addEventListener("click", () => { velocityX = 0; velocityY = 0; targetX = HOME_X; targetY = HOME_Y; });
+  document.getElementById("homeBtn").addEventListener("click", () => { const h = homeXY(); velocityX = 0; velocityY = 0; targetX = h.x; targetY = h.y; });
+  // INDEX-adjacent shuffle: re-randomise the whole canvas, highlights included
+  const shuffleBtn = document.getElementById("shuffleBtn");
+  shuffleBtn.addEventListener("mousedown", e => e.stopPropagation());
+  shuffleBtn.addEventListener("click", () => { shuffleBtn.classList.remove("spin"); void shuffleBtn.offsetWidth; shuffleBtn.classList.add("spin"); reshuffle(); });
   function closeAbout() { about.classList.add("closing"); about.classList.remove("active"); document.body.classList.remove("about-open"); liveVids.forEach(v => v.play().catch(()=>{})); setTimeout(()=>about.classList.remove("closing"), 1300); }
   window.closeAbout = closeAbout;
 
