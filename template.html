@@ -35,10 +35,6 @@
   .card img, .card video { width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; background:transparent; }
   .card img { opacity:0; transition:opacity .4s var(--easein); }
   .card img.ld { opacity:1; }
-  /* shuffle crossfade: old cards fade out, new cards expand + fade in */
-  .card-wrap.cw-out { opacity:0; transform:scale(.96); transition:opacity .42s var(--easein), transform .42s var(--easein); }
-  .card-wrap.cw-in { opacity:0; transform:scale(.9); }
-  .card-wrap.cw-in.cw-show { opacity:1; transform:scale(1); transition:opacity .85s var(--easein), transform .85s var(--slide-ease); }
 
   /* loader: centred 0-100 count that masks the cold load, then hands off to the intro zoom */
   .loader { position:fixed; inset:0; z-index:200; display:flex; align-items:center; justify-content:center;
@@ -47,12 +43,12 @@
   .loader.done { opacity:0; pointer-events:none; }
 
   .hud { position:fixed; z-index:10; font-size:13px; letter-spacing:var(--tracking); line-height:1.4; color:var(--fg); }
-  .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; z-index:115; cursor:pointer; transition:opacity .7s var(--easein) 1.45s; }  /* header upper-left, clickable — returns to first screen; waits for the screen to clear before reappearing */
+  .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; z-index:115; cursor:pointer; transition:opacity .55s var(--easein) .5s; }  /* header upper-left, clickable — returns to first screen; reappears a beat after close */
   .hud-tr { top:30px; right:36px; height:30px; display:flex; align-items:center; }   /* matches X */
   .hud-bl { bottom:24px; left:34px; font-size:11px; }   /* copyright credit, a touch smaller than the main copy */
   .hud-br { bottom:24px; right:36px; text-align:right; }
   .hud-tl, .hud-bl { animation: fadeUp .7s var(--easein) .5s backwards; }             /* header + credit in after images */
-  .hud-tr { animation: fadeUp .95s var(--easein) 1.25s backwards; }                   /* nav links fade in LAST, a touch slower */
+  .hud-tr { animation: fadeUp .75s var(--easein) .85s backwards; }                     /* nav links fade in last, just a beat after the rest */
   body.about-open .hud-tl, body.show-open .hud-tl { opacity:0; pointer-events:none; transition: opacity .3s var(--easein); }  /* header hides fast on open; base rule handles the slow reappear */
 
   .uline { position:relative; cursor:pointer; display:inline-block; color:var(--fg); text-decoration:none; }
@@ -65,7 +61,7 @@
     opacity:0; pointer-events:none; transition:opacity 1.05s var(--easein);
     display:flex; flex-direction:column; overflow:hidden; }
   .overlay.active { opacity:1; pointer-events:auto; }
-  .overlay.closing { transition:opacity 1.55s ease; }   /* slow, unhurried reveal of the canvas on close */
+  .overlay.closing { transition:opacity 1.35s ease; }   /* a touch slower reveal of the canvas on close */
   #about.active { transition:opacity .35s var(--easein); }   /* panel appears quickly so the line cascade is the star */
   .ov-close { position:absolute; top:30px; right:36px; width:30px; height:30px; background:none; border:none; cursor:pointer; z-index:120; display:flex; align-items:center; justify-content:flex-end; padding:0; }
   .ov-close svg { width:20px; height:20px; stroke:var(--fg); stroke-width:2; fill:none; opacity:.85; transition:opacity .2s ease, transform .2s var(--ease); }
@@ -81,13 +77,13 @@
      into view — and only once its file has actually decoded, so nothing ever pops in half-loaded.
      One animation on the slide (not a second one on the img) keeps it from looking jittery. */
   .slide { flex:0 0 auto; height:100%; background:transparent; position:relative;
-    opacity:0; transform:translate3d(0,38px,0) scale(.92); transform-origin:center bottom;   /* rises further + scales up from a touch smaller */
-    transition:opacity 1.9s var(--slide-ease), transform 1.9s var(--slide-ease); }
+    opacity:0; transform:translate3d(0,34px,0) scale(.93); transform-origin:center bottom;   /* rises + scales up from a touch smaller */
+    transition:opacity 2.2s var(--slide-ease), transform 2.2s var(--slide-ease); }
   .slide.in { opacity:1; transform:translate3d(0,0,0) scale(1); }
   /* image itself is always full strip height, width follows its real rendered aspect -> uniform height, variable width */
   .slide img, .slide video { height:100%; width:auto; display:block; }
   /* the box rises on scroll; the image fades in within it once decoded, so a slow file never pops */
-  .slide img { opacity:0; transition:opacity .9s var(--easein); }
+  .slide img { opacity:0; transition:opacity 1.5s var(--easein); }   /* project images fade in slowly */
   .slide img.ld { opacity:1; }
   .vtoggle { position:absolute; left:12px; bottom:12px; width:34px; height:34px; border:none; border-radius:50%;
     background:rgba(0,0,0,.45); color:#fff; cursor:pointer; font-size:13px; line-height:34px; text-align:center; padding:0;
@@ -148,7 +144,7 @@
 
   /* top-right nav: ABOUT / INDEX as type; they cross-fade to a close × when any view is open */
   .hud-tr { gap:18px; z-index:110; }   /* always above overlays so the × animates OFF on close, not just ON */
-  .nav { cursor:pointer; position:relative; transition:opacity .7s var(--easein) 1.45s; }   /* close: waits for the screen to fade out, then fades in */
+  .nav { cursor:pointer; position:relative; transition:opacity .55s var(--easein) .5s; }   /* close: reappears a beat after the screen starts clearing */
   /* fresh link hover — the word rolls up and an identical copy rises from underneath */
   .roll { position:relative; display:inline-block; overflow:hidden; vertical-align:bottom; }
   .roll > span { display:block; transition:transform .68s var(--soft), opacity .68s var(--soft); }
@@ -156,17 +152,9 @@
   .roll:hover > span:nth-child(1), a:hover .roll > span:nth-child(1) { transform:translateY(-100%); opacity:0; }
   .roll:hover > span:nth-child(2), a:hover .roll > span:nth-child(2) { transform:translateY(-100%); opacity:1; }
   body.about-open .nav, body.show-open .nav, body.menu-open .nav { opacity:0; pointer-events:none; transition:opacity .25s var(--ease); }   /* hide words fast when a view opens */
-  /* shuffle icon sits just right of INDEX; strokes DRAW in (like the X) on load / hover / click, then re-randomises */
-  .shuffle { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; padding:0; margin:0; border:none; background:none; cursor:pointer; color:var(--fg); transition:opacity .7s var(--easein) 1.45s; }   /* close: waits for the screen to clear, then fades in */
-  .shuffle svg { width:20px; height:20px; display:block; transition:transform .4s var(--soft); }
-  .shuffle:hover svg { transform:scale(1.18); }                        /* expand on hover, like the X */
-  @keyframes drawin { from { stroke-dashoffset:1; } to { stroke-dashoffset:0; } }
-  .shuffle svg path { stroke-dasharray:1; stroke-dashoffset:0; }        /* drawn + static by default */
-  .shuffle.draw svg path { animation:drawin .6s var(--soft); }         /* strokes draw in on load / click */
-  body.about-open .shuffle, body.show-open .shuffle, body.menu-open .shuffle { opacity:0; pointer-events:none; transition:opacity .25s var(--ease); }   /* hide fast when a view is open */
   /* close × — strokes draw in from the centre when a view opens, spin a quarter-turn + fade to grey on hover */
   .closex { position:absolute; right:0; top:50%; margin-top:-10px; width:20px; height:20px; padding:0; border:none; background:none;
-    cursor:pointer; opacity:0; pointer-events:none; transition:opacity .95s var(--easein), transform .35s var(--soft); }
+    cursor:pointer; opacity:0; pointer-events:none; transition:opacity .7s var(--easein), transform .35s var(--soft); }
   /* strokes DRAW in on open (container snaps opaque so the draw is visible); on close the whole X just fades — no blink */
   .closex span { position:absolute; left:0; top:50%; width:100%; height:1.5px; background:var(--fg); transform-origin:center;
     transition:transform .9s var(--soft); }
@@ -193,8 +181,9 @@
     cursor:pointer; color:var(--fg); font-size:13px; letter-spacing:var(--tracking);
     overflow:hidden; max-height:200px;
     transition:color .4s var(--soft), opacity .3s var(--ease), max-height .45s var(--ease), padding .45s var(--ease), border-color .45s var(--ease); }
-  /* hover greys the row's TEXT (via colour, not opacity — so a hovered scope can come back to full
-     black while the rest of the line stays grey; opacity stays free for the filter collapse) */
+  /* hover greys the row's TEXT — the affordance that shows an index line is a link */
+  .mrow:hover { color:rgba(14,13,13,.42); }
+  .mrow:hover .mtag:hover { color:var(--fg); }          /* the specific scope you're over comes back to black */
   /* filtered-out rows fade then collapse, so the remaining list slides together */
   .mrow.hide { opacity:0; max-height:0; padding-top:0; padding-bottom:0; border-bottom-color:transparent; pointer-events:none; }
   .mtag { cursor:pointer; transition:color .35s var(--soft); }
@@ -268,7 +257,6 @@
 <div class="hud hud-tr">
   <span class="nav" id="aboutBtn"><span class="roll"><span>ABOUT</span><span aria-hidden="true">ABOUT</span></span></span>
   <span class="nav" id="indexBtn"><span class="roll"><span>INDEX</span><span aria-hidden="true">INDEX</span></span></span>
-  <button class="shuffle" id="shuffleBtn" aria-label="Shuffle projects" title="Shuffle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" stroke-linejoin="miter"><path pathLength="1" d="M21 16.0399H17.7707C15.8164 16.0399 13.9845 14.9697 12.8611 13.1716L10.7973 9.86831C9.67384 8.07022 7.84196 7 5.88762 7L3 7"/><path pathLength="1" d="M21 7H17.7707C15.8164 7 13.9845 8.18388 12.8611 10.1729L10.7973 13.8271C9.67384 15.8161 7.84196 17 5.88762 17L3 17"/><path pathLength="1" d="M19 4L22 7L19 10"/><path pathLength="1" d="M19 13L22 16L19 19"/></svg></button>
   <button class="closex" id="closeBtn" aria-label="Close"><span></span><span></span></button>
 </div>
 <div class="hud hud-bl">PROJECTS © 2026</div>
@@ -387,49 +375,28 @@
   function layout() {
     PROJECTS.forEach((p, i) => { p._s = sizeFor(p); p._idx = i; });
     const N = PROJECTS.length;
-    const cluster = PROJECTS.filter(p => p._open);      // opening screen: About + featured, in order
-    const rest    = PROJECTS.filter(p => !p._open);     // everything else, flows below the cluster
-
-    // ---- OPENING CLUSTER: featured work in a loose, left-aligned grid (the first thing you see) ----
-    // Uniform cells keep the "3 across, then 3 below" read; jitter keeps it from feeling rigid.
-    const COLS = innerWidth <= 768 ? 2 : 3;
-    const cW = cluster.length ? Math.max(...cluster.map(p => p._s.w)) : SHORT_SIDE;
-    const cH = cluster.length ? Math.max(...cluster.map(p => p._s.h)) : SHORT_SIDE;
-    // tighter than the loose field so ~3 sit across and the 2nd row peeks into view
-    const clGapX = HGAP * 0.5, clGapY = VGAP * 0.5;
-    const cellW = cW + clGapX, cellH = cH + clGapY;
-    const clRows = cluster.length ? Math.ceil(cluster.length / COLS) : 0;   // 0 when shuffled -> pure loose field
-    const clusterW = cluster.length ? Math.min(cluster.length, COLS) * cellW - clGapX : 0;
-    const clusterH = clRows * cellH;                    // trailing gap doubles as the space before the rest
-
-    // ---- REST: the original balanced-row layout, packed below the cluster ----
-    const sumW = rest.reduce((s, p) => s + p._s.w + HGAP, 0) || 1;
-    const avgBand = (rest.length ? rest.reduce((s, p) => s + p._s.h, 0) / rest.length : cH) + VGAP;
+    const sumW = PROJECTS.reduce((s, p) => s + p._s.w + HGAP, 0);
+    // Row count from the work itself + the viewport: a block shaped like the screen, never below
+    // MIN_TILE_SCREENS in either direction — the guard against the canvas visibly repeating in one screen.
+    const avgBand = PROJECTS.reduce((s, p) => s + p._s.h, 0) / N + VGAP;
     const sw = Math.max(innerWidth, 320), sh = Math.max(innerHeight, 320);
     const minRows = Math.ceil(MIN_TILE_SCREENS * sh / avgBand);
-    const maxRows = Math.max(1, Math.floor(sumW / (MIN_TILE_SCREENS * sw)));
+    const maxRows = Math.floor(sumW / (MIN_TILE_SCREENS * sw));
     let rowCount = Math.round(Math.sqrt(sumW * sh / (avgBand * sw))) || 1;
     if (minRows <= maxRows) rowCount = Math.max(minRows, Math.min(maxRows, rowCount));
-    rowCount = Math.max(1, Math.min(rest.length || 1, rowCount));
+    rowCount = Math.max(1, Math.min(N, rowCount));
 
-    const restRows = rest.length ? partition(rest.map(p => p._s.w + HGAP), rowCount).map(([a, b]) => rest.slice(a, b)) : [];
-    const bands = restRows.map(r => Math.max(...r.map(p => p._s.h)));
-    const rowW  = restRows.map(r => r.reduce((s, p) => s + p._s.w, 0) + (r.length - 1) * HGAP);
-
-    const W = Math.max(clusterW, ...(rowW.length ? rowW : [clusterW]));
-    const restH = bands.reduce((s, b) => s + b, 0) + bands.length * VGAP;
-    const H = clusterH + restH;
+    const order = PROJECTS.slice();
+    const rows = partition(order.map(p => p._s.w + HGAP), rowCount).map(([a, b]) => order.slice(a, b));
+    const bands = rows.map(r => Math.max(...r.map(p => p._s.h)));
+    const rowW  = rows.map(r => r.reduce((s, p) => s + p._s.w, 0) + (r.length - 1) * HGAP);
+    const W = Math.max(...rowW);
+    const H = bands.reduce((s, b) => s + b, 0) + bands.length * VGAP;
 
     const pos = new Array(N);
-    // place the cluster grid at the top-left (anchor = About at cell 0)
-    cluster.forEach((p, i) => {
-      const c = i % COLS, r = Math.floor(i / COLS);
-      const dx = jit(p.slug + "x") * JIT, dy = jit(p.slug + "y") * clGapY * 0.35;
-      pos[p._idx] = { x: c * cellW + dx, y: r * cellH + (cellH - clGapY - p._s.h) / 2 + dy, w: p._s.w, h: p._s.h };
-    });
-    // place the rest in balanced rows below the cluster
-    let y = clusterH;
-    restRows.forEach((r, ri) => {
+    const vgap = (H - bands.reduce((s, b) => s + b, 0)) / bands.length;   // spread slack evenly
+    let y = 0;
+    rows.forEach((r, ri) => {
       const bandH = bands[ri], rw = rowW[ri];
       const extra = r.length > 1 ? Math.min((W - rw) / (r.length - 1), HGAP * 0.55) : 0;
       const gap = HGAP + Math.max(0, extra);
@@ -440,10 +407,10 @@
         pos[p._idx] = { x: x + dx, y: y + (bandH - p._s.h) / 2 + dy, w: p._s.w, h: p._s.h };
         x += p._s.w + gap;
       });
-      y += bandH + VGAP;
+      y += bandH + vgap;
     });
     VARIANTS = [pos];
-    PROJECTS.forEach(p => { p._pos = VARIANTS[0][p._idx]; });   // opening frame reads the cluster
+    PROJECTS.forEach(p => { p._pos = VARIANTS[0][p._idx]; });   // opening frame anchors on project #1
     return { w: Math.round(W), h: Math.round(H) };
   }
   function permFor(col, row) {
@@ -541,27 +508,6 @@
     });
   }
 
-  // Reshuffle EVERYTHING (featured cluster included) into a fresh loose arrangement, then re-home.
-  // The current cards fade out first; the new set expands + fades in at the fresh home framing.
-  let _shuffling = false;
-  function reshuffle() {
-    if (_shuffling) return;
-    _shuffling = true;
-    liveCards.forEach(el => el.classList.add("cw-out"));
-    setTimeout(() => {
-      for (let i = PROJECTS.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [PROJECTS[i], PROJECTS[j]] = [PROJECTS[j], PROJECTS[i]]; }
-      PROJECTS.forEach(p => p._open = false);          // drop the cluster -> highlights mix into the field too
-      TILE = layout(); PITCHX = TILE.w + HGAP; PITCHY = TILE.h;
-      liveCards.forEach(el => el.remove()); liveCards.clear();
-      _cullX = _cullY = _cullS = NaN;
-      const h = homeXY();
-      velocityX = velocityY = 0; targetX = canvasX = h.x; targetY = canvasY = h.y;
-      canvas.style.transform = `translate3d(${canvasX}px, ${canvasY}px, 0) scale(1)`;
-      updateCards(true);
-      liveCards.forEach(el => el.classList.add("cw-in"));
-      requestAnimationFrame(() => requestAnimationFrame(() => { liveCards.forEach(el => el.classList.add("cw-show")); _shuffling = false; }));
-    }, 430);
-  }
 
   /* ---- DRAG: crisp 1:1 while held, smooth drift on release ---- */
   const viewport = document.getElementById("viewport");
@@ -823,7 +769,7 @@
     show.classList.add("closing"); show.classList.remove("active");
     document.body.classList.remove("show-open");
     liveVids.forEach(v => v.play().catch(()=>{}));
-    setTimeout(() => { show.classList.remove("closing"); strip.innerHTML = ""; }, 1650);
+    setTimeout(() => { show.classList.remove("closing"); strip.innerHTML = ""; }, 1450);
   }
   window.closeShow = closeShow;
   function atEnd() { return strip.scrollLeft >= strip.scrollWidth - strip.clientWidth - 4; }
@@ -883,12 +829,7 @@
   // header returns the canvas to the opening framing (the rAF FOLLOW lerp eases it home)
   document.getElementById("homeBtn").addEventListener("mousedown", e => e.stopPropagation());
   document.getElementById("homeBtn").addEventListener("click", () => { const h = homeXY(); velocityX = 0; velocityY = 0; targetX = h.x; targetY = h.y; });
-  // INDEX-adjacent shuffle: re-randomise the whole canvas, highlights included
-  const shuffleBtn = document.getElementById("shuffleBtn");
-  setTimeout(() => shuffleBtn.classList.add("draw"), 1350);         // draw the icon in once, as the nav fades up last
-  shuffleBtn.addEventListener("mousedown", e => e.stopPropagation());
-  shuffleBtn.addEventListener("click", () => { shuffleBtn.classList.remove("draw"); void shuffleBtn.offsetWidth; shuffleBtn.classList.add("draw"); reshuffle(); });
-  function closeAbout() { about.classList.add("closing"); about.classList.remove("active"); document.body.classList.remove("about-open"); liveVids.forEach(v => v.play().catch(()=>{})); setTimeout(()=>about.classList.remove("closing"), 1650); }
+  function closeAbout() { about.classList.add("closing"); about.classList.remove("active"); document.body.classList.remove("about-open"); liveVids.forEach(v => v.play().catch(()=>{})); setTimeout(()=>about.classList.remove("closing"), 1450); }
   window.closeAbout = closeAbout;
 
   /* ---- PROJECT INDEX (list view) ---- */
@@ -922,7 +863,7 @@
     menu.classList.add("closing"); menu.classList.remove("active");
     document.body.classList.remove("menu-open");
     liveVids.forEach(v => v.play().catch(()=>{}));
-    setTimeout(() => menu.classList.remove("closing"), 1650);
+    setTimeout(() => menu.classList.remove("closing"), 1450);
   }
   window.closeMenu = closeMenu;
   document.getElementById("indexBtn").addEventListener("click", openMenu);   // INDEX -> list view
