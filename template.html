@@ -386,8 +386,29 @@
     if (minRows <= maxRows) rowCount = Math.max(minRows, Math.min(maxRows, rowCount));
     rowCount = Math.max(1, Math.min(N, rowCount));
 
-    const order = PROJECTS.slice();
-    const rows = partition(order.map(p => p._s.w + HGAP), rowCount).map(([a, b]) => order.slice(a, b));
+    // Lead the first two rows with the highlighted projects, so the opening screen (top ~3 across,
+    // then ~3 below) is the featured work — while everything stays in the ordinary loose field.
+    const wOf = p => p._s.w + HGAP;
+    const feat = PROJECTS.filter(p => p._open);          // About + highlighted (or the first-5 fallback)
+    const pool = PROJECTS.filter(p => !p._open);
+    let rows;
+    if (feat.length && rowCount >= 2 && pool.length) {
+      const LEAD = Math.min(3, Math.ceil(feat.length / 2));   // 3 highlights lead each of the first two rows
+      const targetRowW = sumW / rowCount;                     // fill each lead row to an ordinary width
+      const q = pool.slice();
+      const buildLead = lead => {
+        const row = lead.slice(); let w = row.reduce((s, p) => s + wOf(p), 0);
+        while (q.length && w < targetRowW) { const p = q.shift(); row.push(p); w += wOf(p); }
+        return row;
+      };
+      const row0 = buildLead(feat.slice(0, LEAD));
+      const row1 = buildLead(feat.slice(LEAD, LEAD * 2));
+      const restRows = q.length ? partition(q.map(wOf), Math.max(1, Math.min(rowCount - 2, q.length))).map(([a, b]) => q.slice(a, b)) : [];
+      rows = [row0, row1, ...restRows];
+    } else {
+      const order = PROJECTS.slice();
+      rows = partition(order.map(wOf), rowCount).map(([a, b]) => order.slice(a, b));
+    }
     const bands = rows.map(r => Math.max(...r.map(p => p._s.h)));
     const rowW  = rows.map(r => r.reduce((s, p) => s + p._s.w, 0) + (r.length - 1) * HGAP);
     const W = Math.max(...rowW);
