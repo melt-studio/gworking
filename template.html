@@ -300,6 +300,8 @@
     const rest   = PROJECTS.filter(p => !p.featured && !_isAbout(p));
     if (!feat.length) feat = rest.splice(0, FEATURED_FALLBACK);   // default keeps today's stable top row
     for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [rest[i], rest[j]] = [rest[j], rest[i]]; }
+    anchor.forEach(p => p._open = true);                          // _open = the opening-screen cluster
+    feat.forEach(p => p._open = true);
     PROJECTS.length = 0;
     PROJECTS.push(...anchor, ...feat, ...rest);
   })();
@@ -372,60 +374,63 @@
   function layout() {
     PROJECTS.forEach((p, i) => { p._s = sizeFor(p); p._idx = i; });
     const N = PROJECTS.length;
-    const sumW = PROJECTS.reduce((s, p) => s + p._s.w + HGAP, 0);
-    // Row count from the work itself + the viewport: aim for a block shaped like the screen (repeats
-    // sit equally far in every direction), but never let it fall below MIN_TILE_SCREENS in either
-    // direction — that's the guard against the canvas visibly repeating inside one screen.
-    const avgBand = PROJECTS.reduce((s, p) => s + p._s.h, 0) / N + VGAP;
+    const cluster = PROJECTS.filter(p => p._open);      // opening screen: About + featured, in order
+    const rest    = PROJECTS.filter(p => !p._open);     // everything else, flows below the cluster
+
+    // ---- OPENING CLUSTER: featured work in a loose, left-aligned grid (the first thing you see) ----
+    // Uniform cells keep the "3 across, then 3 below" read; jitter keeps it from feeling rigid.
+    const COLS = innerWidth <= 768 ? 2 : 3;
+    const cW = cluster.length ? Math.max(...cluster.map(p => p._s.w)) : SHORT_SIDE;
+    const cH = cluster.length ? Math.max(...cluster.map(p => p._s.h)) : SHORT_SIDE;
+    // tighter than the loose field so ~3 sit across and the 2nd row peeks into view
+    const clGapX = HGAP * 0.5, clGapY = VGAP * 0.5;
+    const cellW = cW + clGapX, cellH = cH + clGapY;
+    const clRows = Math.max(1, Math.ceil(cluster.length / COLS));
+    const clusterW = Math.min(cluster.length, COLS) * cellW - clGapX;
+    const clusterH = clRows * cellH;                    // trailing gap doubles as the space before the rest
+
+    // ---- REST: the original balanced-row layout, packed below the cluster ----
+    const sumW = rest.reduce((s, p) => s + p._s.w + HGAP, 0) || 1;
+    const avgBand = (rest.length ? rest.reduce((s, p) => s + p._s.h, 0) / rest.length : cH) + VGAP;
     const sw = Math.max(innerWidth, 320), sh = Math.max(innerHeight, 320);
-    const minRows = Math.ceil(MIN_TILE_SCREENS * sh / avgBand);        // tall enough
-    const maxRows = Math.floor(sumW / (MIN_TILE_SCREENS * sw));        // wide enough
+    const minRows = Math.ceil(MIN_TILE_SCREENS * sh / avgBand);
+    const maxRows = Math.max(1, Math.floor(sumW / (MIN_TILE_SCREENS * sw)));
     let rowCount = Math.round(Math.sqrt(sumW * sh / (avgBand * sw))) || 1;
     if (minRows <= maxRows) rowCount = Math.max(minRows, Math.min(maxRows, rowCount));
-    rowCount = Math.max(1, Math.min(N, rowCount));
+    rowCount = Math.max(1, Math.min(rest.length || 1, rowCount));
 
-    // build each variant's rows (variant 0 keeps the current order so the opening never moves)
-    const arrs = [];
-    for (let k = 0; k < VARIANT_COUNT; k++) {
-      const order = k === 0 ? PROJECTS.slice() : shuffledCopy(PROJECTS);
-      const rows = partition(order.map(p => p._s.w + HGAP), rowCount).map(([a, b]) => order.slice(a, b));
-      arrs.push({
-        rows,
-        bands: rows.map(r => Math.max(...r.map(p => p._s.h))),
-        rowW:  rows.map(r => r.reduce((s, p) => s + p._s.w, 0) + (r.length - 1) * HGAP),
-      });
-    }
-    // one shared footprint big enough for every variant -> identical tiles -> seamless repeat
-    const W = Math.max(...arrs.map(a => Math.max(...a.rowW)));
-    const H = Math.max(...arrs.map(a => a.bands.reduce((s, b) => s + b, 0) + a.bands.length * VGAP));
+    const restRows = rest.length ? partition(rest.map(p => p._s.w + HGAP), rowCount).map(([a, b]) => rest.slice(a, b)) : [];
+    const bands = restRows.map(r => Math.max(...r.map(p => p._s.h)));
+    const rowW  = restRows.map(r => r.reduce((s, p) => s + p._s.w, 0) + (r.length - 1) * HGAP);
 
-    VARIANTS = arrs.map(a => {
-      const pos = new Array(N);
-      const vgap = (H - a.bands.reduce((s, b) => s + b, 0)) / a.bands.length;   // spread slack evenly
-      let y = 0;
-      a.rows.forEach((r, ri) => {
-        const bandH = a.bands[ri], rw = a.rowW[ri];
-        // gap-justify (capped) so rows fill the block evenly; jitter varies the gaps a touch
-        const extra = r.length > 1 ? Math.min((W - rw) / (r.length - 1), HGAP * 0.55) : 0;
-        const gap = HGAP + Math.max(0, extra);
-        // Nudge each row sideways by a different amount. Centring every row lines the gaps up into
-        // vertical "rivers" of empty space; staggering breaks them. The shift is uniform per row, so
-        // each row keeps exactly HGAP to its neighbouring block — tiling is unaffected.
-        const stagger = jit("row" + ri) * HGAP * 0.45;
-        let x = (W - (rw + (gap - HGAP) * (r.length - 1))) / 2 + stagger;
-        r.forEach(p => {
-          // dx stays small (must not eat into the horizontal gap); dy is much larger so cards sit at
-          // staggered heights instead of on a shared baseline — that's what stops the layout reading
-          // as clean rows with even gaps. Capped at 35% of VGAP so rows can never collide.
-          const dx = jit(p.slug + "x") * JIT, dy = jit(p.slug + "y") * VGAP * 0.35;
-          pos[p._idx] = { x: x + dx, y: y + (bandH - p._s.h) / 2 + dy, w: p._s.w, h: p._s.h };
-          x += p._s.w + gap;
-        });
-        y += bandH + vgap;
-      });
-      return pos;
+    const W = Math.max(clusterW, ...(rowW.length ? rowW : [clusterW]));
+    const restH = bands.reduce((s, b) => s + b, 0) + bands.length * VGAP;
+    const H = clusterH + restH;
+
+    const pos = new Array(N);
+    // place the cluster grid at the top-left (anchor = About at cell 0)
+    cluster.forEach((p, i) => {
+      const c = i % COLS, r = Math.floor(i / COLS);
+      const dx = jit(p.slug + "x") * JIT, dy = jit(p.slug + "y") * clGapY * 0.35;
+      pos[p._idx] = { x: c * cellW + dx, y: r * cellH + (cellH - clGapY - p._s.h) / 2 + dy, w: p._s.w, h: p._s.h };
     });
-    PROJECTS.forEach(p => { p._pos = VARIANTS[0][p._idx]; });   // opening frame reads variant 0
+    // place the rest in balanced rows below the cluster
+    let y = clusterH;
+    restRows.forEach((r, ri) => {
+      const bandH = bands[ri], rw = rowW[ri];
+      const extra = r.length > 1 ? Math.min((W - rw) / (r.length - 1), HGAP * 0.55) : 0;
+      const gap = HGAP + Math.max(0, extra);
+      const stagger = jit("row" + ri) * HGAP * 0.45;
+      let x = (W - (rw + (gap - HGAP) * (r.length - 1))) / 2 + stagger;
+      r.forEach(p => {
+        const dx = jit(p.slug + "x") * JIT, dy = jit(p.slug + "y") * VGAP * 0.35;
+        pos[p._idx] = { x: x + dx, y: y + (bandH - p._s.h) / 2 + dy, w: p._s.w, h: p._s.h };
+        x += p._s.w + gap;
+      });
+      y += bandH + VGAP;
+    });
+    VARIANTS = [pos];
+    PROJECTS.forEach(p => { p._pos = VARIANTS[0][p._idx]; });   // opening frame reads the cluster
     return { w: Math.round(W), h: Math.round(H) };
   }
   function permFor(col, row) {
