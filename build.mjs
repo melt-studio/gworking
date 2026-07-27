@@ -26,7 +26,7 @@ function ver(rel) {                       // content-hash query so a changed ass
 
 if (!TOKEN) { console.error("ERROR: set AIRTABLE_TOKEN (Airtable personal access token)."); process.exit(1); }
 
-const F = { name:"name", overview:"scope", client:"client", copy:"copy", thumb:"projectThumbnail", imgs:"projectImages", ref:"ref" };
+const F = { name:"name", overview:"scope", client:"client", copy:"copy", thumb:"projectThumbnail", imgs:"projectImages", ref:"ref", hide:"hide" };
 
 const slugify = s => s.toLowerCase().replace(/&/g,"and").replace(/['’]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const extFor  = a => { const e = path.extname(a.filename||"").toLowerCase();
@@ -209,6 +209,8 @@ for (const rec of records) {
   const isAboutRow = f[F.name] === "About";
   // only take copy that actually has content — a stray/empty "About" row must never blank the page
   if (isAboutRow && (f[F.copy] || "").trim()) about = f[F.copy];
+  // "hide" checkbox in Airtable removes a project from the live site (About copy above is still captured)
+  if (f[F.hide]) { console.log(`  HIDE ${f[F.name]}`); continue; }
   if (isAboutRow && !(f[F.thumb] || [])[0]) continue;
   if (!f[F.name]) continue;
   // unique per record so duplicate project titles never share/overwrite an asset folder
