@@ -47,12 +47,12 @@
   .loader.done { opacity:0; pointer-events:none; }
 
   .hud { position:fixed; z-index:10; font-size:13px; letter-spacing:var(--tracking); line-height:1.4; color:var(--fg); }
-  .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; z-index:115; cursor:pointer; transition:opacity .6s var(--easein) .5s; }  /* header upper-left, clickable — returns to first screen; reappears slowly after images on close */
+  .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; z-index:115; cursor:pointer; transition:opacity .7s var(--easein) 1.45s; }  /* header upper-left, clickable — returns to first screen; waits for the screen to clear before reappearing */
   .hud-tr { top:30px; right:36px; height:30px; display:flex; align-items:center; }   /* matches X */
   .hud-bl { bottom:24px; left:34px; font-size:11px; }   /* copyright credit, a touch smaller than the main copy */
   .hud-br { bottom:24px; right:36px; text-align:right; }
-  .hud-tl, .hud-tr, .hud-bl { animation: fadeUp .7s var(--easein) .5s backwards; }   /* text in after images */
-  .hud-tr { transition: opacity .35s var(--easein); }                                /* close: ABOUT fades back fast */
+  .hud-tl, .hud-bl { animation: fadeUp .7s var(--easein) .5s backwards; }             /* header + credit in after images */
+  .hud-tr { animation: fadeUp .95s var(--easein) 1.25s backwards; }                   /* nav links fade in LAST, a touch slower */
   body.about-open .hud-tl, body.show-open .hud-tl { opacity:0; pointer-events:none; transition: opacity .3s var(--easein); }  /* header hides fast on open; base rule handles the slow reappear */
 
   .uline { position:relative; cursor:pointer; display:inline-block; color:var(--fg); text-decoration:none; }
@@ -81,9 +81,9 @@
      into view — and only once its file has actually decoded, so nothing ever pops in half-loaded.
      One animation on the slide (not a second one on the img) keeps it from looking jittery. */
   .slide { flex:0 0 auto; height:100%; background:transparent; position:relative;
-    opacity:0; transform:translate3d(0,10px,0);        /* short, purely vertical rise (no sideways drift) */
+    opacity:0; transform:translate3d(0,38px,0) scale(.92); transform-origin:center bottom;   /* rises further + scales up from a touch smaller */
     transition:opacity 1.9s var(--slide-ease), transform 1.9s var(--slide-ease); }
-  .slide.in { opacity:1; transform:none; }
+  .slide.in { opacity:1; transform:translate3d(0,0,0) scale(1); }
   /* image itself is always full strip height, width follows its real rendered aspect -> uniform height, variable width */
   .slide img, .slide video { height:100%; width:auto; display:block; }
   /* the box rises on scroll; the image fades in within it once decoded, so a slow file never pops */
@@ -148,7 +148,7 @@
 
   /* top-right nav: ABOUT / INDEX as type; they cross-fade to a close × when any view is open */
   .hud-tr { gap:18px; z-index:110; }   /* always above overlays so the × animates OFF on close, not just ON */
-  .nav { cursor:pointer; position:relative; transition:opacity .6s var(--easein) .5s; }   /* close: reappears slowly, after the images */
+  .nav { cursor:pointer; position:relative; transition:opacity .7s var(--easein) 1.45s; }   /* close: waits for the screen to fade out, then fades in */
   /* fresh link hover — the word rolls up and an identical copy rises from underneath */
   .roll { position:relative; display:inline-block; overflow:hidden; vertical-align:bottom; }
   .roll > span { display:block; transition:transform .68s var(--soft), opacity .68s var(--soft); }
@@ -157,11 +157,12 @@
   .roll:hover > span:nth-child(2), a:hover .roll > span:nth-child(2) { transform:translateY(-100%); opacity:1; }
   body.about-open .nav, body.show-open .nav, body.menu-open .nav { opacity:0; pointer-events:none; transition:opacity .25s var(--ease); }   /* hide words fast when a view opens */
   /* shuffle icon sits just right of INDEX; strokes DRAW in (like the X) on load / hover / click, then re-randomises */
-  .shuffle { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; padding:0; margin:0; border:none; background:none; cursor:pointer; color:var(--fg); transition:opacity .6s var(--easein) .45s; }
-  .shuffle svg { width:20px; height:20px; display:block; }
+  .shuffle { display:inline-flex; align-items:center; justify-content:center; width:22px; height:22px; padding:0; margin:0; border:none; background:none; cursor:pointer; color:var(--fg); transition:opacity .7s var(--easein) 1.45s; }   /* close: waits for the screen to clear, then fades in */
+  .shuffle svg { width:20px; height:20px; display:block; transition:transform .4s var(--soft); }
+  .shuffle:hover svg { transform:scale(1.18); }                        /* expand on hover, like the X */
   @keyframes drawin { from { stroke-dashoffset:1; } to { stroke-dashoffset:0; } }
   .shuffle svg path { stroke-dasharray:1; stroke-dashoffset:0; }        /* drawn + static by default */
-  .shuffle:hover svg path, .shuffle.draw svg path { animation:drawin .6s var(--soft); }   /* strokes re-draw on hover / click / load */
+  .shuffle.draw svg path { animation:drawin .6s var(--soft); }         /* strokes draw in on load / click */
   body.about-open .shuffle, body.show-open .shuffle, body.menu-open .shuffle { opacity:0; pointer-events:none; transition:opacity .25s var(--ease); }   /* hide fast when a view is open */
   /* close × — strokes draw in from the centre when a view opens, spin a quarter-turn + fade to grey on hover */
   .closex { position:absolute; right:0; top:50%; margin-top:-10px; width:20px; height:20px; padding:0; border:none; background:none;
@@ -884,7 +885,7 @@
   document.getElementById("homeBtn").addEventListener("click", () => { const h = homeXY(); velocityX = 0; velocityY = 0; targetX = h.x; targetY = h.y; });
   // INDEX-adjacent shuffle: re-randomise the whole canvas, highlights included
   const shuffleBtn = document.getElementById("shuffleBtn");
-  setTimeout(() => shuffleBtn.classList.add("draw"), 600);          // draw the icon in once, after the nav fades up
+  setTimeout(() => shuffleBtn.classList.add("draw"), 1350);         // draw the icon in once, as the nav fades up last
   shuffleBtn.addEventListener("mousedown", e => e.stopPropagation());
   shuffleBtn.addEventListener("click", () => { shuffleBtn.classList.remove("draw"); void shuffleBtn.offsetWidth; shuffleBtn.classList.add("draw"); reshuffle(); });
   function closeAbout() { about.classList.add("closing"); about.classList.remove("active"); document.body.classList.remove("about-open"); liveVids.forEach(v => v.play().catch(()=>{})); setTimeout(()=>about.classList.remove("closing"), 1650); }
