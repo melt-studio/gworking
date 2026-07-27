@@ -289,14 +289,19 @@
 <script>
   const PROJECTS = __PAYLOAD__;
   const ORDERED = PROJECTS.slice();   // stable Airtable order, preserved for the index/list view
-  // Keep the first LOCK_COUNT projects in Airtable order (stable opening screen);
-  // reshuffle everything after them on every page load so the canvas feels fresh.
-  const LOCK_COUNT = 6;
-  (function shuffleTail() {
-    for (let i = PROJECTS.length - 1; i > LOCK_COUNT; i--) {
-      const j = LOCK_COUNT + Math.floor(Math.random() * (i - LOCK_COUNT + 1));
-      [PROJECTS[i], PROJECTS[j]] = [PROJECTS[j], PROJECTS[i]];
-    }
+  // Canvas order = [About anchor] + [featured, in Airtable order] + [everything else, reshuffled each load].
+  // "featured" is the focused set (starred in Airtable): those hold the opening screen and never move;
+  // the rest rotate below/around so the canvas still feels fresh. The index keeps ORDERED above.
+  const FEATURED_FALLBACK = 5;        // if nothing is starred yet, treat the first N (Airtable order) as featured
+  const _isAbout = (p) => (p.ref || "").trim().toLowerCase() === "about";
+  (function orderCanvas() {
+    const anchor = PROJECTS.filter(p => _isAbout(p));
+    let feat     = PROJECTS.filter(p => p.featured && !_isAbout(p));
+    const rest   = PROJECTS.filter(p => !p.featured && !_isAbout(p));
+    if (!feat.length) feat = rest.splice(0, FEATURED_FALLBACK);   // default keeps today's stable top row
+    for (let i = rest.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [rest[i], rest[j]] = [rest[j], rest[i]]; }
+    PROJECTS.length = 0;
+    PROJECTS.push(...anchor, ...feat, ...rest);
   })();
   const CUR_L = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2732%27%20height%3D%2723%27%20viewBox%3D%270%200%20180.29%20129.05%27%3E%3Cg%20transform%3D%27translate%28180.29%2C0%29%20scale%28-1%2C1%29%27%3E%3Cpath%20d%3D%27M178.6%2C60.72l-.73-.69L114.53%2C0l-5.21%2C6.17%2C56.95%2C54.02-166.28.02v8.5l166.02.03-56.75%2C54.09%2C5.25%2C6.23%2C63.29-60.1c2.2-1.94%2C2.49-3.35%2C2.48-4.48%2C0-1.42-.51-2.57-1.67-3.75h-.02Z%27%20fill%3D%27%230E0D0D%27/%3E%3C/g%3E%3C/svg%3E") 16 11, pointer`, CUR_R = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2732%27%20height%3D%2723%27%20viewBox%3D%270%200%20180.29%20129.05%27%3E%3Cpath%20d%3D%27M178.6%2C60.72l-.73-.69L114.53%2C0l-5.21%2C6.17%2C56.95%2C54.02-166.28.02v8.5l166.02.03-56.75%2C54.09%2C5.25%2C6.23%2C63.29-60.1c2.2-1.94%2C2.49-3.35%2C2.48-4.48%2C0-1.42-.51-2.57-1.67-3.75h-.02Z%27%20fill%3D%27%230E0D0D%27/%3E%3C/svg%3E") 16 11, pointer`;
   const PLAY = '<svg viewBox="0 0 24 24"><polygon points="7 5 19 12 7 19"/></svg>';

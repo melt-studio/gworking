@@ -26,7 +26,7 @@ function ver(rel) {                       // content-hash query so a changed ass
 
 if (!TOKEN) { console.error("ERROR: set AIRTABLE_TOKEN (Airtable personal access token)."); process.exit(1); }
 
-const F = { name:"name", overview:"scope", client:"client", copy:"copy", thumb:"projectThumbnail", imgs:"projectImages", ref:"ref", hide:"hide" };
+const F = { name:"name", overview:"scope", client:"client", copy:"copy", thumb:"projectThumbnail", imgs:"projectImages", ref:"ref", hide:"hide", featured:"featured" };
 
 const slugify = s => s.toLowerCase().replace(/&/g,"and").replace(/['’]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 const extFor  = a => { const e = path.extname(a.filename||"").toLowerCase();
@@ -265,6 +265,7 @@ for (const rec of records) {
     copy: isAboutRow ? "" : (f[F.copy] || ""),          // About text already ships with the About page
     overview: f[F.overview] || "",
     ref: isAboutRow ? "about" : (f[F.ref] || ""),       // marks it as the secret About link
+    featured: !!f[F.featured],                          // "focused" projects that hold the opening screen
     thumb, slides, gallery: [],
   });
   console.log(`  ${slug}: thumb ${thumb?1:0}, slides ${slides.length}`);
