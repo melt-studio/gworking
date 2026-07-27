@@ -375,28 +375,48 @@
   function layout() {
     PROJECTS.forEach((p, i) => { p._s = sizeFor(p); p._idx = i; });
     const N = PROJECTS.length;
-    const sumW = PROJECTS.reduce((s, p) => s + p._s.w + HGAP, 0);
-    // Row count from the work itself + the viewport: a block shaped like the screen, never below
-    // MIN_TILE_SCREENS in either direction — the guard against the canvas visibly repeating in one screen.
-    const avgBand = PROJECTS.reduce((s, p) => s + p._s.h, 0) / N + VGAP;
-    const sw = Math.max(innerWidth, 320), sh = Math.max(innerHeight, 320);
-    const minRows = Math.ceil(MIN_TILE_SCREENS * sh / avgBand);
-    const maxRows = Math.floor(sumW / (MIN_TILE_SCREENS * sw));
-    let rowCount = Math.round(Math.sqrt(sumW * sh / (avgBand * sw))) || 1;
-    if (minRows <= maxRows) rowCount = Math.max(minRows, Math.min(maxRows, rowCount));
-    rowCount = Math.max(1, Math.min(N, rowCount));
+    const cluster = PROJECTS.filter(p => p._open);      // opening screen: About + highlighted projects, in order
+    const rest    = PROJECTS.filter(p => !p._open);     // everything else, flows below the highlights
 
-    const order = PROJECTS.slice();
-    const rows = partition(order.map(p => p._s.w + HGAP), rowCount).map(([a, b]) => order.slice(a, b));
-    const bands = rows.map(r => Math.max(...r.map(p => p._s.h)));
-    const rowW  = rows.map(r => r.reduce((s, p) => s + p._s.w, 0) + (r.length - 1) * HGAP);
-    const W = Math.max(...rowW);
-    const H = bands.reduce((s, b) => s + b, 0) + bands.length * VGAP;
+    // ---- OPENING HIGHLIGHTS: a loose, left-aligned grid (3 across, 2nd row peeking) ----
+    const COLS = innerWidth <= 768 ? 2 : 3;
+    const cW = cluster.length ? Math.max(...cluster.map(p => p._s.w)) : SHORT_SIDE;
+    const cH = cluster.length ? Math.max(...cluster.map(p => p._s.h)) : SHORT_SIDE;
+    const clGapX = HGAP * 0.5, clGapY = VGAP * 0.5;     // tighter than the loose field so ~3 sit across
+    const cellW = cW + clGapX, cellH = cH + clGapY;
+    const clRows = cluster.length ? Math.ceil(cluster.length / COLS) : 0;
+    const clusterW = cluster.length ? Math.min(cluster.length, COLS) * cellW - clGapX : 0;
+    const clusterH = clRows * cellH;
+
+    // ---- REST: the loose balanced field, packed below the highlights ----
+    const sumW = rest.reduce((s, p) => s + p._s.w + HGAP, 0) || 1;
+    const avgBand = (rest.length ? rest.reduce((s, p) => s + p._s.h, 0) / rest.length : cH) + VGAP;
+    const sw = Math.max(innerWidth, 320), sh = Math.max(innerHeight, 320);
+    // derive rows from ALL projects so the field stays as dense as the original (no sparse gaps)
+    const minRows = Math.ceil(MIN_TILE_SCREENS * sh / avgBand);
+    const maxRows = Math.max(1, Math.floor(sumW / (MIN_TILE_SCREENS * sw)));
+    let rowCount = Math.round(Math.sqrt((sumW * (N / Math.max(rest.length, 1))) * sh / (avgBand * sw))) || 1;
+    if (minRows <= maxRows) rowCount = Math.max(minRows, Math.min(maxRows, rowCount));
+    rowCount = Math.max(1, Math.min(rest.length || 1, rowCount));
+
+    const restRows = rest.length ? partition(rest.map(p => p._s.w + HGAP), rowCount).map(([a, b]) => rest.slice(a, b)) : [];
+    const bands = restRows.map(r => Math.max(...r.map(p => p._s.h)));
+    const rowW  = restRows.map(r => r.reduce((s, p) => s + p._s.w, 0) + (r.length - 1) * HGAP);
+
+    const W = Math.max(clusterW, ...(rowW.length ? rowW : [clusterW]));
+    const restH = bands.reduce((s, b) => s + b, 0) + bands.length * VGAP;
+    const H = clusterH + restH;
 
     const pos = new Array(N);
-    const vgap = (H - bands.reduce((s, b) => s + b, 0)) / bands.length;   // spread slack evenly
-    let y = 0;
-    rows.forEach((r, ri) => {
+    // place the highlights grid at the top-left (anchor = About at cell 0)
+    cluster.forEach((p, i) => {
+      const c = i % COLS, r = Math.floor(i / COLS);
+      const dx = jit(p.slug + "x") * JIT, dy = jit(p.slug + "y") * clGapY * 0.35;
+      pos[p._idx] = { x: c * cellW + dx, y: r * cellH + (cellH - clGapY - p._s.h) / 2 + dy, w: p._s.w, h: p._s.h };
+    });
+    // place the rest in balanced rows below the highlights
+    let y = clusterH;
+    restRows.forEach((r, ri) => {
       const bandH = bands[ri], rw = rowW[ri];
       const extra = r.length > 1 ? Math.min((W - rw) / (r.length - 1), HGAP * 0.55) : 0;
       const gap = HGAP + Math.max(0, extra);
@@ -407,10 +427,10 @@
         pos[p._idx] = { x: x + dx, y: y + (bandH - p._s.h) / 2 + dy, w: p._s.w, h: p._s.h };
         x += p._s.w + gap;
       });
-      y += bandH + vgap;
+      y += bandH + VGAP;
     });
     VARIANTS = [pos];
-    PROJECTS.forEach(p => { p._pos = VARIANTS[0][p._idx]; });   // opening frame anchors on project #1
+    PROJECTS.forEach(p => { p._pos = VARIANTS[0][p._idx]; });   // opening frame reads the highlights
     return { w: Math.round(W), h: Math.round(H) };
   }
   function permFor(col, row) {
