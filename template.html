@@ -325,7 +325,7 @@
   const MIN_TILE_SCREENS = 1.6;
   // canvas spacing differs by device: desktop keeps the original airy layout; laptop/phone tighten
   function spacingFor(w) {
-    if (w >= 1800) return { h:380, v:374, j:30, s:415 };  // desktop  (s = horizontal height)
+    if (w >= 1800) return { h:305, v:300, j:24, s:330 };  // desktop  (s = horizontal height) — scaled down ~20% so thumbnails aren't oversized on big screens
     if (w >= 768)  return { h:200, v:140, j:20, s:250 };  // laptop
     return { h:106, v:112, j:14, s:260 };                  // phone — smaller thumbnails
   }
