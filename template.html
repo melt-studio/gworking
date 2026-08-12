@@ -29,24 +29,21 @@
   .card-wrap { position:absolute; transition:left .55s var(--ease), top .55s var(--ease); }   /* desktop/laptop: cards appear instantly, as before */
   .card { width:100%; height:100%; cursor:pointer; overflow:hidden; position:relative;
     background:transparent; transition:transform 1.1s var(--ease), width .55s var(--ease), height .55s var(--ease); }
-  /* hover: the whole card scales up (a visible bump); the white copy overlay fades over it */
-  .card:hover { transform:scale(1.08); }
+  /* hover: the thumbnail IMAGE scales up (bump); the copy overlay is a sibling of .card, so it never scales — it only fades */
   @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
   @keyframes fadeSoftDown { from { opacity:1; transform:none; } to { opacity:0; transform:translateY(9px); } }
-  .card img, .card video { width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; background:transparent; }
-  .card video { transform:translateZ(0); }   /* force the video onto a normal texture layer so the overlay truly covers it — kills the edge line */
-  .card img { opacity:0; transition:opacity .4s var(--easein); }
+  .card img, .card video { width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; background:transparent; transition:transform 1.1s var(--ease); }
+  .card video { transform:translateZ(0); }   /* video on its own texture layer so the overlay covers it — no edge line */
+  .card img { opacity:0; transition:opacity .4s var(--easein), transform 1.1s var(--ease); }
   .card img.ld { opacity:1; }
-  /* hover: a website-white overlay fades in with the title + scope, top-left */
-  .card-ov { position:absolute; inset:-6px; background:var(--bg); opacity:0; pointer-events:none;
-    transform:translateZ(0);   /* own compositing layer above the (playing) video, so no edge line */
+  .card-wrap:hover .card img { transform:scale(1.08); }
+  .card-wrap:hover .card video { transform:scale(1.08) translateZ(0); }
+  /* copy overlay (sibling of .card): covers the card and fades in — no scaling */
+  .card-ov { position:absolute; inset:-2px; background:var(--bg); opacity:0; pointer-events:none; transform:translateZ(0);
     display:flex; flex-direction:column; justify-content:flex-start; align-items:flex-start; gap:6px;
     padding:20px; transition:opacity .4s var(--soft); }
-  .card:hover .card-ov { opacity:1; transition:opacity .45s var(--soft) .12s; }   /* copy fades in a beat after the bump; fades out promptly on leave */
-  /* counter-scale the copy against the card's 1.08 hover zoom so the text holds its final size */
-  .card-ov .ov-t, .card-ov .ov-s { transform-origin:left top; transition:transform 1.1s var(--ease); }
-  .card:hover .card-ov .ov-t, .card:hover .card-ov .ov-s { transform:scale(0.9259); }
-  .card-ov .ov-t { font-size:14px; letter-spacing:var(--tracking); text-transform:uppercase; line-height:1.25; }   /* matches site type */
+  .card-wrap:hover .card-ov { opacity:1; transition:opacity .45s var(--soft) .12s; }
+  .card-ov .ov-t { font-size:14px; letter-spacing:var(--tracking); text-transform:uppercase; line-height:1.25; }
   .card-ov .ov-s { font-size:14px; letter-spacing:var(--tracking); text-transform:uppercase; line-height:1.3; opacity:.5; }
 
   /* loader: centred 0-100 count that masks the cold load, then hands off to the intro zoom */
@@ -490,7 +487,7 @@
     wrap._p = p; wrap._col = col; wrap._row = rowT;
     wrap._x = x; wrap._y = y; wrap._w = p._pos.w; wrap._h = p._pos.h;
     const ov = isAboutLink(p) ? "" : `<div class="card-ov"><span class="ov-t">${escH(p.name)}</span>${(p.overview || "").trim() ? `<span class="ov-s">${escH(p.overview)}</span>` : ""}</div>`;
-    wrap.innerHTML = `<div class="card" style="width:${p._pos.w}px;height:${p._pos.h}px;">${mediaEl(p.thumb)}${ov}</div>`;
+    wrap.innerHTML = `<div class="card" style="width:${p._pos.w}px;height:${p._pos.h}px;">${mediaEl(p.thumb)}</div>${ov}`;   /* overlay is a sibling of .card so it doesn't scale with the hover bump */
     wrap.querySelectorAll("img").forEach(im => { if (im.complete && im.naturalWidth) im.classList.add("ld"); });
     const cardEl = wrap.querySelector(".card");
     cardEl.addEventListener("click", () => { if (dragDistance < 5) { isAboutLink(p) ? openAbout(false) : openShow(p); } });
