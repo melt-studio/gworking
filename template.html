@@ -43,6 +43,9 @@
     display:flex; flex-direction:column; justify-content:flex-start; align-items:flex-start; gap:6px;
     padding:20px; transition:opacity .4s var(--soft); }
   .card:hover .card-ov { opacity:1; transition:opacity .45s var(--soft) .12s; }   /* copy fades in a beat after the bump; fades out promptly on leave */
+  /* counter-scale the copy against the card's 1.08 hover zoom so the text holds its final size */
+  .card-ov .ov-t, .card-ov .ov-s { transform-origin:left top; transition:transform 1.1s var(--ease); }
+  .card:hover .card-ov .ov-t, .card:hover .card-ov .ov-s { transform:scale(0.9259); }
   .card-ov .ov-t { font-size:14px; letter-spacing:var(--tracking); text-transform:uppercase; line-height:1.25; }   /* matches site type */
   .card-ov .ov-s { font-size:14px; letter-spacing:var(--tracking); text-transform:uppercase; line-height:1.3; opacity:.5; }
 
