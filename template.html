@@ -29,14 +29,15 @@
   .card-wrap { position:absolute; transition:left .55s var(--ease), top .55s var(--ease); }   /* desktop/laptop: cards appear instantly, as before */
   .card { width:100%; height:100%; cursor:pointer; overflow:hidden; position:relative;
     background:transparent; transition:transform 1.1s var(--ease), width .55s var(--ease), height .55s var(--ease); }
-  .card:hover { transform:scale(1.08); }
+  /* hover zoom scales the IMAGE inside the (static) card — no card-level transform, so no clip-edge hairline */
+  .card:hover img, .card:hover video { transform:scale(1.08); }
   @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:none; } }
   @keyframes fadeSoftDown { from { opacity:1; transform:none; } to { opacity:0; transform:translateY(9px); } }
-  .card img, .card video { width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; background:transparent; }
-  .card img { opacity:0; transition:opacity .4s var(--easein); }
+  .card img, .card video { width:100%; height:100%; object-fit:contain; display:block; pointer-events:none; background:transparent; transition:transform 1.1s var(--ease); }
+  .card img { opacity:0; transition:opacity .4s var(--easein), transform 1.1s var(--ease); }
   .card img.ld { opacity:1; }
   /* hover: a website-white overlay fades in with the title + scope, bottom-left */
-  .card-ov { position:absolute; inset:-3px; background:var(--bg); opacity:0; pointer-events:none;   /* overshoot edges (clipped) so no thin border hairline */
+  .card-ov { position:absolute; inset:0; background:var(--bg); opacity:0; pointer-events:none;
     display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-start; gap:6px;
     padding:18px; transition:opacity .4s var(--soft); }
   .card:hover .card-ov { opacity:1; }
@@ -52,7 +53,7 @@
   .hud { position:fixed; z-index:10; font-size:14px; letter-spacing:var(--tracking); line-height:1.4; color:var(--fg); }
   .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; z-index:115; cursor:pointer; transition:opacity .55s var(--easein) .5s; }  /* header upper-left, clickable — returns to first screen; reappears a beat after close */
   .hud-tr { top:30px; right:36px; height:30px; display:flex; align-items:center; }   /* matches X */
-  .hud-bl { top:56px; left:34px; font-size:10px; }   /* copyright credit — moved to the top-left, under the header */
+  .hud-bl { top:66px; left:34px; font-size:10px; }   /* copyright credit — top-left, clearing the header block */
   .hud-br { bottom:24px; right:36px; text-align:right; }
   .hud-tl, .hud-bl { animation: fadeUp .7s var(--easein) .5s backwards; }             /* header + credit in after images */
   .hud-tr { animation: fadeUp .75s var(--easein) .85s backwards; }                     /* nav links fade in last, just a beat after the rest */
@@ -222,7 +223,7 @@
     .hud-tl .roll > span { display:inline; }
     .hud-tl .roll > span:nth-child(2) { display:none; }
     .hud-tr { right:20px; align-items:flex-start; height:auto; line-height:1.35; }
-    .hud-bl { left:20px; top:64px; }   /* clear the wrapped mobile header */
+    .hud-bl { left:20px; top:74px; }   /* clear the wrapped mobile header */
     /* slideshow -> vertical stack, copy at top */
     .show-strip { order:2; flex-direction:column; align-items:stretch; gap:28px;
       overflow-x:hidden; overflow-y:auto; padding:14px 20px 48px; cursor:default !important; }
