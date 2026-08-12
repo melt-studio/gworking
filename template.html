@@ -864,7 +864,7 @@
   /* ---- PROJECT INDEX (list view) ---- */
   const menu = document.getElementById("menu");
   const menuList = document.getElementById("menuList");
-  const escH = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  function escH(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }   // hoisted so buildCard (runs earlier) can use it
   function buildMenuRows() {
     // the secret About card lives on the canvas only — keep it out of the index
     menuList.innerHTML = ORDERED.map((p, i) => {
