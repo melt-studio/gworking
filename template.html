@@ -52,18 +52,20 @@
     transition:opacity .6s var(--ease); }
   .loader.done { opacity:0; pointer-events:none; }
 
-  /* lens: canvas edges curve away — soft blur + darkened falloff toward the rim (sphere feel) */
-  .lens { position:fixed; inset:0; z-index:4; pointer-events:none;
-    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
-    -webkit-mask-image:radial-gradient(100% 100% at 50% 50%, transparent 30%, #000 80%);
-            mask-image:radial-gradient(100% 100% at 50% 50%, transparent 30%, #000 80%); }
-  .lens::after { content:""; position:absolute; inset:0;
-    background:radial-gradient(100% 100% at 50% 50%, transparent 45%, rgba(14,13,13,.10) 100%); }
+  /* lens: darkened falloff toward the rim (always renders) + a separately-masked edge blur
+     (mask lives on a wrapper so it doesn't cancel backdrop-filter) */
+  .lens { position:fixed; inset:0; z-index:4; pointer-events:none; }
+  .lens-vig { position:absolute; inset:0;
+    background:radial-gradient(100% 100% at 50% 50%, transparent 42%, rgba(14,13,13,.15) 100%); }
+  .lens-clip { position:absolute; inset:0;
+    -webkit-mask-image:radial-gradient(100% 100% at 50% 50%, transparent 26%, #000 76%);
+            mask-image:radial-gradient(100% 100% at 50% 50%, transparent 26%, #000 76%); }
+  .lens-blur { position:absolute; inset:0; -webkit-backdrop-filter:blur(7px); backdrop-filter:blur(7px); }
 
   /* intro headline — a persistent backdrop BEHIND the work (never scales/fades); the work scales down over it */
   .introline { position:fixed; inset:0; z-index:1; display:flex; align-items:center; justify-content:center;
     padding:0 7vw; text-align:center; pointer-events:none; color:var(--fg);
-    font-size:clamp(30px, 5vw, 88px); line-height:1.06; letter-spacing:var(--tracking); text-transform:uppercase; }
+    font-size:clamp(15px, 2.5vw, 44px); line-height:1.1; letter-spacing:var(--tracking); text-transform:uppercase; }
 
   .hud { position:fixed; z-index:10; font-size:14px; letter-spacing:var(--tracking); line-height:1.4; color:var(--fg); }
   .hud-tl { top:30px; left:34px; height:30px; display:flex; align-items:center; z-index:115; cursor:pointer; transition:opacity .55s var(--easein) .5s; }  /* header upper-left, clickable — returns to first screen; reappears a beat after close */
@@ -275,7 +277,7 @@
 
 <div class="loader" id="loader"><span id="loadNum">0</span></div>
 <div class="viewport" id="viewport"><div class="canvas" id="canvas"></div></div>
-<div class="lens"></div>
+<div class="lens"><div class="lens-vig"></div><div class="lens-clip"><div class="lens-blur"></div></div></div>
 <div class="introline" id="introline">Creative director for brand identity, campaigns, and hands-on design.</div>
 
 <div class="hud hud-tl" id="homeBtn"><span class="roll"><span>GREG IS A CREATIVE DIRECTOR</span><span aria-hidden="true">GREG IS A CREATIVE DIRECTOR</span></span></div>
