@@ -330,9 +330,9 @@
   /* align header + copyright to the same 36px as the X */
   .hud-tl{left:36px !important;} .hud-bl{left:36px !important;}
   /* menu moved to top-left, beside the header */
-  .topleft{position:fixed; top:30px; left:50%; transform:translateX(-50%); z-index:115; display:flex; align-items:baseline; gap:24px;}
+  .topleft{position:fixed; top:30px; left:36px; right:36px; z-index:115; display:flex; align-items:baseline; justify-content:space-between; gap:16px;}
   .topleft .nav{position:relative; cursor:pointer;}
-  .navgroup{display:inline-flex; align-items:baseline; gap:24px;}
+  .navgroup{display:contents;}   /* items spread evenly across the full width */
   /* never let the nav wrap/stack — keep it a single non-wrapping row */
   .topleft{flex-wrap:nowrap !important;}
   .topleft, .topleft *{white-space:nowrap !important;}
@@ -449,9 +449,9 @@
 <div class="loader" id="loader"><span id="loadNum">0</span></div>
 <canvas id="gl"></canvas>
 
-<div class="introline" id="introline">Greg is a creative director<br>and designer, working on brand<br>identity and campaigns.</div>
+<div class="introline" id="introline">Creative director and<br>designer. Brand identity<br>and campaigns.</div>
 
-<div class="topleft"><span class="navgroup"><span class="nav" id="aboutBtn"><span class="roll"><span>About</span><span aria-hidden="true">About</span></span></span><span class="hud worktoggle" id="workBtn"><span class="roll"><span>Work</span><span aria-hidden="true">Work</span></span></span><span class="nav" id="indexBtn"><span class="roll"><span>Archive</span><span aria-hidden="true">Archive</span></span></span></span></div><div class="workmenu" id="workMenu"><div class="wrow" data-k="brand"><span class="roll"><span>Branding</span><span aria-hidden="true">Branding</span></span></div><div class="wrow" data-k="campaign"><span class="roll"><span>Campaigns</span><span aria-hidden="true">Campaigns</span></span></div><div class="wrow" data-k="illustration"><span class="roll"><span>Illustration</span><span aria-hidden="true">Illustration</span></span></div><div class="wrow" data-k="typography"><span class="roll"><span>Typography</span><span aria-hidden="true">Typography</span></span></div></div>
+<div class="topleft"><span class="nav home" id="homeLink"><span class="roll"><span>Greg Zadrozny<span class="ny"> — New York</span></span><span aria-hidden="true">Greg Zadrozny<span class="ny"> — New York</span></span></span></span><span class="navgroup"><span class="nav" id="aboutBtn"><span class="roll"><span>About</span><span aria-hidden="true">About</span></span></span><span class="hud worktoggle" id="workBtn"><span class="roll"><span>Work</span><span aria-hidden="true">Work</span></span></span><span class="nav" id="indexBtn"><span class="roll"><span>Archive</span><span aria-hidden="true">Archive</span></span></span></span></div><div class="workmenu" id="workMenu"><div class="wrow" data-k="brand"><span class="roll"><span>Branding</span><span aria-hidden="true">Branding</span></span></div><div class="wrow" data-k="campaign"><span class="roll"><span>Campaigns</span><span aria-hidden="true">Campaigns</span></span></div><div class="wrow" data-k="illustration"><span class="roll"><span>Illustration</span><span aria-hidden="true">Illustration</span></span></div><div class="wrow" data-k="typography"><span class="roll"><span>Typography</span><span aria-hidden="true">Typography</span></span></div></div>
 <div class="hud hud-tr">
   <button class="closex" id="closeBtn" aria-label="Close"><span></span><span></span></button>
 </div>
