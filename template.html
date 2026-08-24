@@ -330,8 +330,20 @@
   /* align header + copyright to the same 36px as the X */
   .hud-tl{left:36px !important;} .hud-bl{left:36px !important;}
   /* menu moved to top-left, beside the header */
-  .topleft{position:fixed; top:30px; left:36px; z-index:115; display:flex; align-items:baseline; gap:24px;}
+  .topleft{position:fixed; top:30px; left:50%; transform:translateX(-50%); z-index:115; display:flex; align-items:baseline; gap:24px;}
   .topleft .nav{position:relative; cursor:pointer;}
+  .navgroup{display:inline-flex; align-items:baseline; gap:24px;}
+  /* never let the nav wrap/stack — keep it a single non-wrapping row */
+  .topleft{flex-wrap:nowrap !important;}
+  .topleft, .topleft *{white-space:nowrap !important;}
+  /* phone: keep the nav at the top, tighter, and drop "— New York" so it fits */
+  @media (max-width:680px){
+    .topleft{gap:15px;}
+    .navgroup{gap:15px;}
+    .topleft .nav, .topleft .worktoggle{font-size:13.5px !important;}
+    .ny{display:none;}
+    .hud-bl{display:none !important;}   /* no copyright on phone */
+  }
   /* Work dropdown */
   .worktoggle{position:relative !important; cursor:pointer; display:inline-flex; align-items:center; gap:8px;}
   .work-caret{display:inline-block; width:6px; height:6px; border-right:1.3px solid var(--fg); border-bottom:1.3px solid var(--fg);
@@ -437,9 +449,9 @@
 <div class="loader" id="loader"><span id="loadNum">0</span></div>
 <canvas id="gl"></canvas>
 
-<div class="introline" id="introline">Creative director and<br>designer. Brand identity<br>and campaigns.</div>
+<div class="introline" id="introline">Greg is a creative director<br>and designer, working on brand<br>identity and campaigns.</div>
 
-<div class="topleft"><span class="nav home" id="homeLink"><span class="roll"><span>Greg Zadrozny — New York</span><span aria-hidden="true">Greg Zadrozny — New York</span></span></span><span class="nav" id="aboutBtn"><span class="roll"><span>About</span><span aria-hidden="true">About</span></span></span><span class="hud worktoggle" id="workBtn"><span class="roll"><span>Work</span><span aria-hidden="true">Work</span></span></span><span class="nav" id="indexBtn"><span class="roll"><span>Archive</span><span aria-hidden="true">Archive</span></span></span></div><div class="workmenu" id="workMenu"><div class="wrow" data-k="brand"><span class="roll"><span>Branding</span><span aria-hidden="true">Branding</span></span></div><div class="wrow" data-k="campaign"><span class="roll"><span>Campaigns</span><span aria-hidden="true">Campaigns</span></span></div><div class="wrow" data-k="illustration"><span class="roll"><span>Illustration</span><span aria-hidden="true">Illustration</span></span></div><div class="wrow" data-k="typography"><span class="roll"><span>Typography</span><span aria-hidden="true">Typography</span></span></div></div>
+<div class="topleft"><span class="navgroup"><span class="nav" id="aboutBtn"><span class="roll"><span>About</span><span aria-hidden="true">About</span></span></span><span class="hud worktoggle" id="workBtn"><span class="roll"><span>Work</span><span aria-hidden="true">Work</span></span></span><span class="nav" id="indexBtn"><span class="roll"><span>Archive</span><span aria-hidden="true">Archive</span></span></span></span></div><div class="workmenu" id="workMenu"><div class="wrow" data-k="brand"><span class="roll"><span>Branding</span><span aria-hidden="true">Branding</span></span></div><div class="wrow" data-k="campaign"><span class="roll"><span>Campaigns</span><span aria-hidden="true">Campaigns</span></span></div><div class="wrow" data-k="illustration"><span class="roll"><span>Illustration</span><span aria-hidden="true">Illustration</span></span></div><div class="wrow" data-k="typography"><span class="roll"><span>Typography</span><span aria-hidden="true">Typography</span></span></div></div>
 <div class="hud hud-tr">
   <button class="closex" id="closeBtn" aria-label="Close"><span></span><span></span></button>
 </div>
@@ -511,10 +523,12 @@ if (_gl) (function(){
   const SCENE_VS=`attribute vec2 aCorner;uniform vec2 uQuadPos,uQuadSize,uPan,uRes;uniform float uZoom;varying vec2 vUv;
     void main(){vec2 world=uQuadPos+aCorner*uQuadSize;vec2 px=(world-uPan)*uZoom+uRes*0.5;vec2 uv=px/uRes;
     vUv=vec2(aCorner.x,aCorner.y);gl_Position=vec4(uv.x*2.0-1.0,1.0-uv.y*2.0,0.0,1.0);}`;
-  const SCENE_FS=`precision highp float;varying vec2 vUv;uniform sampler2D uTex;void main(){gl_FragColor=vec4(texture2D(uTex,vUv).rgb,1.0);}`;
+  // knock out the exact off-white bg (#e8ecf0 = 232,236,240) baked into the art, KEEP true whites
+  const KEY_HEX=[232/255,236/255,240/255], KEY_LO=0.0, KEY_HI=0.02;
+  const SCENE_FS=`precision highp float;varying vec2 vUv;uniform sampler2D uTex;const vec3 KEY=vec3(${KEY_HEX.join(",")});void main(){vec3 c=texture2D(uTex,vUv).rgb;float a=smoothstep(${KEY_LO.toFixed(3)},${KEY_HI.toFixed(3)},distance(c,KEY));gl_FragColor=vec4(c,a);}`;
   const LENS_VS=`attribute vec2 aPos;varying vec2 vT;void main(){vT=aPos*0.5+0.5;gl_Position=vec4(aPos,0.0,1.0);}`;
   const LENS_FS=`precision highp float;varying vec2 vT;uniform sampler2D uFBO;uniform float uAspect,uStrength,uVig,uIntro;
-    void main(){vec2 uv=vec2(vT.x,1.0-vT.y);vec2 c=uv-0.5;vec2 ca=vec2(c.x*uAspect,c.y);float rr=dot(ca,ca);float f=1.0+uStrength*rr*rr;
+    void main(){vec2 uv=vec2(vT.x,1.0-vT.y);vec2 c=uv-0.5;vec2 ca=vec2(c.x*min(uAspect,1.5),c.y);float rr=dot(ca,ca);float f=1.0+uStrength*rr*rr;
     vec2 d=0.5+c*f;vec4 s=texture2D(uFBO,vec2(d.x,1.0-d.y));if(d.x<0.0||d.x>1.0||d.y<0.0||d.y>1.0)s=vec4(0.0);
     float vig=smoothstep(0.98,0.32,length(ca));gl_FragColor=vec4(s.rgb,s.a*mix(1.0-uVig,1.0,vig)*uIntro);}`;
   function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);
@@ -547,6 +561,7 @@ if (_gl) (function(){
   const STRENGTH=-0.48, ZOOM=0.85, VIG=0.11;
   function hash(i){let h=(i*2654435761)>>>0;return (h%1000)/1000;}
   // one texture per project (skip the About "secret" card — it has no thumb on the field)
+  const VIDEO_OK = location.protocol!=="file:";   // WebGL can't texture a file:// video (tainted) — served site only
   const FIELD=PROJECTS.map((p,i)=>({p,idx:i})).filter(o=>!isAboutLink(o.p));
   const tex=FIELD.map(o=>{const a=(o.p.thumb&&o.p.thumb.w&&o.p.thumb.h)?o.p.thumb.w/o.p.thumb.h:1;
     let qw,qh; if(a>=1){qw=420;qh=420/a;}else{qh=420;qw=420*a;}
@@ -555,7 +570,13 @@ if (_gl) (function(){
     const src=(typeof THUMBS!=="undefined"&&THUMBS[o.p.slug]) || (o.p.thumb&&(o.p.thumb.poster||o.p.thumb.file));
     if(src){const im=new Image();im.onload=()=>{gl.bindTexture(gl.TEXTURE_2D,it.t);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,im);};im.src=src;}
+    // live video tile (served site only) — starts on the poster, then plays when on-screen
+    if(VIDEO_OK && o.p.thumb && o.p.thumb.type && o.p.thumb.type.indexOf("video")===0 && o.p.thumb.file){
+      const v=document.createElement("video"); v.src=o.p.thumb.file; v.muted=true; v.loop=true;
+      v.playsInline=true; v.setAttribute("playsinline",""); v.setAttribute("webkit-playsinline",""); v.preload="none"; it.vid=v;
+    }
     return it;});
+  const videoItems=tex.filter(it=>it.vid);
   const cell=600;
   let cols, rowsN, fieldW, fieldH, cells;
   function layout(list){
@@ -595,8 +616,22 @@ if (_gl) (function(){
       const io=intro(), rz=ZOOM*io.factor;
       if(!drag&&(Math.abs(velocityX)>0.02||Math.abs(velocityY)>0.02)){targetX-=velocityX/ZOOM;targetY-=velocityY/ZOOM;velocityX*=FRICTION;velocityY*=FRICTION;}
       canvasX+=(targetX-canvasX)*FOLLOW; canvasY+=(targetY-canvasY)*FOLLOW;
+      // live video tiles: play + upload the frame only while on-screen; pause off-screen
+      if(videoItems.length){
+        const vw=(W/DPR)/rz, vh=(H/DPR)/rz, vx0=canvasX-vw/2, vx1=canvasX+vw/2, vy0=canvasY-vh/2, vy1=canvasY+vh/2;
+        for(const it of videoItems) it._vis=false;
+        for(const c of cells){ const it=c.it; if(!it.vid) continue;
+          const ox=Math.round((canvasX-c.x)/fieldW)*fieldW, oy=Math.round((canvasY-c.y)/fieldH)*fieldH, x=c.x+ox, y=c.y+oy;
+          if(x<vx1&&x+it.w>vx0&&y<vy1&&y+it.h>vy0) it._vis=true; }
+        for(const it of videoItems){
+          if(it._vis){ if(it.vid.paused) it.vid.play().catch(()=>{});
+            if(it.vid.readyState>=2){ try{ gl.bindTexture(gl.TEXTURE_2D,it.t); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+              gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,it.vid); }catch(e){} } }
+          else if(!it.vid.paused) it.vid.pause();
+        }
+      }
       gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);gl.viewport(0,0,W,H);gl.disable(gl.BLEND);
-      gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.clearColor(0.909,0.925,0.941,0.0);gl.clear(gl.COLOR_BUFFER_BIT);   // bg-tinted transparent -> no dark edge fringe
       gl.useProgram(scene.p);gl.bindBuffer(gl.ARRAY_BUFFER,quadBuf);
       gl.enableVertexAttribArray(scene.A.aCorner);gl.vertexAttribPointer(scene.A.aCorner,2,gl.FLOAT,false,0,0);
       gl.uniform2f(scene.U.uRes,W/DPR,H/DPR);gl.uniform1f(scene.U.uZoom,rz);gl.uniform2f(scene.U.uPan,canvasX,canvasY);
@@ -620,10 +655,10 @@ if (_gl) (function(){
     requestAnimationFrame(frame);
   }
 
-  function screenToWorld(mx,my){const asp=(W/DPR)/(H/DPR);let ex=mx-0.5,ey=my-0.5,cx=ex,cy=ey;
+  function screenToWorld(mx,my){const asp=Math.min((W/DPR)/(H/DPR),1.5);let ex=mx-0.5,ey=my-0.5,cx=ex,cy=ey;
     for(let k=0;k<6;k++){const rr=cx*asp*cx*asp+cy*cy;const f=1+STRENGTH*rr*rr;cx=ex/f;cy=ey/f;}
     return [cx*(W/DPR)/ZOOM+canvasX, cy*(H/DPR)/ZOOM+canvasY];}
-  function distort(uvx,uvy){const asp=(W/DPR)/(H/DPR);const cx=uvx-0.5,cy=uvy-0.5;const rr=cx*asp*cx*asp+cy*cy;const f=1+STRENGTH*rr*rr;return [0.5+cx*f,0.5+cy*f];}
+  function distort(uvx,uvy){const asp=Math.min((W/DPR)/(H/DPR),1.5);const cx=uvx-0.5,cy=uvy-0.5;const rr=cx*asp*cx*asp+cy*cy;const f=1+STRENGTH*rr*rr;return [0.5+cx*f,0.5+cy*f];}
   function worldToScreen(wx,wy){const uvx=(wx-canvasX)*ZOOM/(W/DPR)+0.5, uvy=(wy-canvasY)*ZOOM/(H/DPR)+0.5;const d=distort(uvx,uvy);return [d[0]*innerWidth,d[1]*innerHeight];}
   function pick(px,py){const w=screenToWorld(px/innerWidth,py/innerHeight);
     for(let i=cells.length-1;i>=0;i--){const c=cells[i],it=c.it;
@@ -945,7 +980,7 @@ if (_gl) (function(){
   var _wb=document.getElementById("workBtn");
   var _wm=document.getElementById("workMenu");
   function _posMenu(){ if(!_wb||!_wm)return; var r=_wb.getBoundingClientRect();
-    _wm.style.left=Math.round(r.left)+"px"; _wm.style.top=Math.round(r.bottom+3)+"px"; }
+    _wm.style.left=Math.round(r.left)+"px"; _wm.style.bottom="auto"; _wm.style.top=Math.round(r.bottom+3)+"px"; }
   function _clearSel(){ if(_wm) _wm.querySelectorAll(".wrow").forEach(function(x){x.classList.remove("sel-item");}); }
   if(_wb) _wb.addEventListener("click",function(e){e.stopPropagation();
     var b=document.body;
