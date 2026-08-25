@@ -285,7 +285,7 @@
     font-size:15.5px !important; text-transform:none !important; letter-spacing:0.01em !important; line-height:1.4 !important; }
   .about-inner{line-height:1.5 !important;}
   /* copyright */
-  .hud-bl{font-size:9px !important; text-transform:uppercase !important; letter-spacing:0.05em !important;}
+  .hud-bl{font-size:8px !important; text-transform:uppercase !important; letter-spacing:0.05em !important;}
   /* central intro line: 2x, all caps, tight leading, fades in first */
   @keyframes glfade{to{opacity:1;}}
   .introline{font-size:clamp(17px, 2.8vw, 28px) !important; text-transform:uppercase !important; line-height:1.14 !important; letter-spacing:-0.012em !important;
@@ -325,8 +325,8 @@
   .show-bar-head{position:absolute; top:0; left:0; right:0; height:56px; display:flex; align-items:flex-start;
     justify-content:space-between; padding:15px 36px 0; cursor:pointer; transition:padding-top .5s var(--slide-ease);}
   .show-bar.open .show-bar-head{padding-top:30px;}
-  .show-bar-head .num{color:var(--fg); font-size:12.5px !important; text-transform:uppercase !important; letter-spacing:0.02em !important;}
-  .pi-label{display:inline-flex; align-items:center; gap:5px; font-size:12.5px !important; text-transform:uppercase !important; letter-spacing:0.02em !important;}
+  .show-bar-head .num{color:var(--fg); font-size:11.5px !important; text-transform:uppercase !important; letter-spacing:0.02em !important;}
+  .pi-label{display:inline-flex; align-items:center; gap:5px; font-size:11.5px !important; text-transform:uppercase !important; letter-spacing:0.02em !important;}
   /* align header + copyright to the same 36px as the X */
   .hud-tl{left:36px !important;} .hud-bl{left:36px !important;}
   /* menu moved to top-left, beside the header */
@@ -336,14 +336,7 @@
   /* never let the nav wrap/stack — keep it a single non-wrapping row */
   .topleft{flex-wrap:nowrap !important;}
   .topleft, .topleft *{white-space:nowrap !important;}
-  /* phone: keep the nav at the top, tighter, and drop "— New York" so it fits */
-  @media (max-width:680px){
-    .topleft{gap:15px;}
-    .navgroup{gap:15px;}
-    .topleft .nav, .topleft .worktoggle{font-size:13.5px !important;}
-    .ny{display:none;}
-    .hud-bl{display:none !important;}   /* no copyright on phone */
-  }
+  /* (phone nav rules live at the end so they win over the centered layout) */
   /* Work dropdown */
   .worktoggle{position:relative !important; cursor:pointer; display:inline-flex; align-items:center; gap:8px;}
   .work-caret{display:inline-block; width:6px; height:6px; border-right:1.3px solid var(--fg); border-bottom:1.3px solid var(--fg);
@@ -353,7 +346,7 @@
     opacity:0; pointer-events:none; transform:translateY(-6px); transition:opacity .4s var(--easein), transform .45s var(--soft);}
   body.work-open .workmenu, body.work-sel .workmenu{opacity:1; pointer-events:auto; transform:none;}
   .workmenu .wrow{padding:4px 2px; cursor:pointer; overflow:hidden; max-height:22px;
-    font-size:12.5px; text-transform:uppercase; letter-spacing:0.02em; opacity:0; transform:translateY(6px);
+    font-size:11.5px; text-transform:uppercase; letter-spacing:0.02em; opacity:0; transform:translateY(6px);
     transition:opacity .5s var(--soft), transform .5s var(--soft), max-height .45s var(--soft), padding .45s var(--soft);}
   body.work-open .workmenu .wrow{opacity:1; transform:none;}
   /* selected: every other item collapses away, the chosen one stays (slides to the top slot under Work) */
@@ -408,7 +401,7 @@
   .pi-panel .desc{line-height:1.55;}
   /* client + scope (and their inner bold/tags): all caps, 1pt smaller */
   .pi-panel .cl,.pi-panel .cl *,.pi-panel .sc,.pi-panel .sc *{
-    font-size:11px !important; text-transform:uppercase !important; letter-spacing:0.01em !important;}
+    font-size:10px !important; text-transform:uppercase !important; letter-spacing:0.01em !important;}
   .pi-panel .cl b{font-weight:700 !important;}
   .sc-tag{display:inline-block; margin-right:24px;}
   /* video play/pause: centered on the art, website-white glyph, white stroke, 20% white fill */
@@ -442,6 +435,24 @@
   /* smaller all-caps type: no antialiasing (intro line keeps it) */
   .hud-bl,.pi-label,.show-bar-head .num,.pi-panel .cl,.pi-panel .cl *,.pi-panel .sc,.pi-panel .sc *,.workmenu .wrow{
     -webkit-font-smoothing:auto !important; -moz-osx-font-smoothing:auto !important;}
+  /* ===== layout: nav-as-tagline, centered vertically; no central copy ===== */
+  .introline{display:none !important;}
+  .topleft{top:50% !important; transform:translateY(-50%) !important; opacity:1 !important;}
+  .topleft .nav, .topleft .worktoggle{font-size:clamp(14px, 2.6vw, 28px) !important; text-transform:none !important; letter-spacing:-0.012em !important;}
+  /* intro reveal: top-left tagline first, the rest of the nav + copyright at the warp */
+  #homeLink{opacity:0 !important; transition:opacity 1.4s var(--soft) !important;}
+  body.intro-go #homeLink{opacity:1 !important;}
+  .navgroup > *{opacity:0; transition:opacity 1.1s var(--soft);}
+  body.chrome-in .navgroup > *{opacity:1;}
+  /* copyright moved to the right */
+  .hud-bl{left:auto !important; right:36px !important;}
+  /* phone: whole nav on one line at the top, small button-like gaps, scaled to fit */
+  @media (max-width:680px){
+    .topleft{top:20px !important; transform:none !important; left:18px !important; right:18px !important;
+      flex-direction:row !important; align-items:baseline !important; justify-content:flex-start !important; gap:10px !important;}
+    .topleft .nav, .topleft .worktoggle{font-size:clamp(10px, 3.2vw, 15px) !important;}
+    .hud-bl{display:none !important;}
+  }
 </style>
 </head>
 <body>
@@ -451,7 +462,7 @@
 
 <div class="introline" id="introline">Creative director and<br>designer. Brand identity<br>and campaigns.</div>
 
-<div class="topleft"><span class="nav home" id="homeLink"><span class="roll"><span>Greg Zadrozny<span class="ny"> — New York</span></span><span aria-hidden="true">Greg Zadrozny<span class="ny"> — New York</span></span></span></span><span class="navgroup"><span class="nav" id="aboutBtn"><span class="roll"><span>About</span><span aria-hidden="true">About</span></span></span><span class="hud worktoggle" id="workBtn"><span class="roll"><span>Work</span><span aria-hidden="true">Work</span></span></span><span class="nav" id="indexBtn"><span class="roll"><span>Archive</span><span aria-hidden="true">Archive</span></span></span></span></div><div class="workmenu" id="workMenu"><div class="wrow" data-k="brand"><span class="roll"><span>Branding</span><span aria-hidden="true">Branding</span></span></div><div class="wrow" data-k="campaign"><span class="roll"><span>Campaigns</span><span aria-hidden="true">Campaigns</span></span></div><div class="wrow" data-k="illustration"><span class="roll"><span>Illustration</span><span aria-hidden="true">Illustration</span></span></div><div class="wrow" data-k="typography"><span class="roll"><span>Typography</span><span aria-hidden="true">Typography</span></span></div></div>
+<div class="topleft"><span class="nav home" id="homeLink"><span class="roll"><span>Greg is a creative director</span><span aria-hidden="true">Greg is a creative director</span></span></span><span class="navgroup"><span class="nav" id="aboutBtn"><span class="roll"><span>About</span><span aria-hidden="true">About</span></span></span><span class="hud worktoggle" id="workBtn"><span class="roll"><span>Work</span><span aria-hidden="true">Work</span></span></span><span class="nav" id="indexBtn"><span class="roll"><span>Archive</span><span aria-hidden="true">Archive</span></span></span></span></div><div class="workmenu" id="workMenu"><div class="wrow" data-k="brand"><span class="roll"><span>Branding</span><span aria-hidden="true">Branding</span></span></div><div class="wrow" data-k="campaign"><span class="roll"><span>Campaigns</span><span aria-hidden="true">Campaigns</span></span></div><div class="wrow" data-k="illustration"><span class="roll"><span>Illustration</span><span aria-hidden="true">Illustration</span></span></div><div class="wrow" data-k="typography"><span class="roll"><span>Typography</span><span aria-hidden="true">Typography</span></span></div></div>
 <div class="hud hud-tr">
   <button class="closex" id="closeBtn" aria-label="Close"><span></span><span></span></button>
 </div>
