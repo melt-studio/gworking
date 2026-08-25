@@ -521,7 +521,7 @@
    site's hooks: openShow(p) (hoisted below), targetX/Y, velocityX/Y, homeXY(),
    endIntro(), liveVids. Thumbnails come from THUMBS[slug] (base64, injected). ===== */
 const _gl_cv = document.getElementById("gl");
-const _gl = _gl_cv.getContext("webgl", { alpha:true, premultipliedAlpha:false, antialias:false });
+const _gl = _gl_cv.getContext("webgl", { alpha:true, premultipliedAlpha:true, antialias:false });
 const liveVids = new Set();               // shim: overlay code calls liveVids.forEach(...)
 let targetX = 0, targetY = 0, canvasX = 0, canvasY = 0, velocityX = 0, velocityY = 0;
 let dragDistance = 0;
@@ -540,7 +540,7 @@ if (_gl) (function(){
   const LENS_FS=`precision highp float;varying vec2 vT;uniform sampler2D uFBO;uniform float uAspect,uStrength,uVig,uIntro;
     void main(){vec2 uv=vec2(vT.x,1.0-vT.y);vec2 c=uv-0.5;vec2 ca=vec2(c.x*min(uAspect,1.5),c.y);float rr=dot(ca,ca);float f=1.0+uStrength*rr*rr;
     vec2 d=0.5+c*f;vec4 s=texture2D(uFBO,vec2(d.x,1.0-d.y));if(d.x<0.0||d.x>1.0||d.y<0.0||d.y>1.0)s=vec4(0.0);
-    float vig=smoothstep(0.98,0.32,length(ca));gl_FragColor=vec4(s.rgb,s.a*mix(1.0-uVig,1.0,vig)*uIntro);}`;
+    float vig=smoothstep(0.98,0.32,length(ca));float m=mix(1.0-uVig,1.0,vig)*uIntro;gl_FragColor=vec4(s.rgb*m,s.a*m);}`;
   function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);
     if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(o));return o;}
   function mkProg(vs,fs,at,un){const p=gl.createProgram();gl.attachShader(p,sh(gl.VERTEX_SHADER,vs));gl.attachShader(p,sh(gl.FRAGMENT_SHADER,fs));
@@ -642,7 +642,7 @@ if (_gl) (function(){
         }
       }
       gl.bindFramebuffer(gl.FRAMEBUFFER,fbo);gl.viewport(0,0,W,H);gl.disable(gl.BLEND);
-      gl.clearColor(0.909,0.925,0.941,0.0);gl.clear(gl.COLOR_BUFFER_BIT);   // bg-tinted transparent -> no dark edge fringe
+      gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);   // fully transparent; premultiplied compositing handles edges
       gl.useProgram(scene.p);gl.bindBuffer(gl.ARRAY_BUFFER,quadBuf);
       gl.enableVertexAttribArray(scene.A.aCorner);gl.vertexAttribPointer(scene.A.aCorner,2,gl.FLOAT,false,0,0);
       gl.uniform2f(scene.U.uRes,W/DPR,H/DPR);gl.uniform1f(scene.U.uZoom,rz);gl.uniform2f(scene.U.uPan,canvasX,canvasY);
@@ -655,7 +655,7 @@ if (_gl) (function(){
           gl.uniform2f(scene.U.uQuadPos,c.x+ox-(sw-c.it.w)*0.5,c.y+oy-(sh-c.it.h)*0.5);gl.uniform2f(scene.U.uQuadSize,sw,sh);
           gl.bindTexture(gl.TEXTURE_2D,c.it.t);gl.drawArrays(gl.TRIANGLES,0,6);}}
       gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,W,H);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT);
-      gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+      gl.enable(gl.BLEND);gl.blendFunc(gl.ONE,gl.ONE_MINUS_SRC_ALPHA);   // premultiplied
       gl.useProgram(lens.p);gl.bindBuffer(gl.ARRAY_BUFFER,fsBuf);
       gl.enableVertexAttribArray(lens.A.aPos);gl.vertexAttribPointer(lens.A.aPos,2,gl.FLOAT,false,0,0);
       gl.uniform1f(lens.U.uAspect,(W/DPR)/(H/DPR));gl.uniform1f(lens.U.uStrength,io.strength);
