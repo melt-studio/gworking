@@ -534,9 +534,8 @@ if (_gl) (function(){
   const SCENE_VS=`attribute vec2 aCorner;uniform vec2 uQuadPos,uQuadSize,uPan,uRes;uniform float uZoom;varying vec2 vUv;
     void main(){vec2 world=uQuadPos+aCorner*uQuadSize;vec2 px=(world-uPan)*uZoom+uRes*0.5;vec2 uv=px/uRes;
     vUv=vec2(aCorner.x,aCorner.y);gl_Position=vec4(uv.x*2.0-1.0,1.0-uv.y*2.0,0.0,1.0);}`;
-  // knock out the exact off-white bg (#e8ecf0 = 232,236,240) baked into the art, KEEP true whites
-  const KEY_HEX=[232/255,236/255,240/255], KEY_LO=0.0, KEY_HI=0.02;
-  const SCENE_FS=`precision highp float;varying vec2 vUv;uniform sampler2D uTex;const vec3 KEY=vec3(${KEY_HEX.join(",")});void main(){vec3 c=texture2D(uTex,vUv).rgb;float a=smoothstep(${KEY_LO.toFixed(3)},${KEY_HI.toFixed(3)},distance(c,KEY));gl_FragColor=vec4(c,a);}`;
+  // nav band sits on top now — no white keying, thumbnails render fully opaque
+  const SCENE_FS=`precision highp float;varying vec2 vUv;uniform sampler2D uTex;void main(){gl_FragColor=vec4(texture2D(uTex,vUv).rgb,1.0);}`;
   const LENS_VS=`attribute vec2 aPos;varying vec2 vT;void main(){vT=aPos*0.5+0.5;gl_Position=vec4(aPos,0.0,1.0);}`;
   const LENS_FS=`precision highp float;varying vec2 vT;uniform sampler2D uFBO;uniform float uAspect,uStrength,uVig,uIntro;
     void main(){vec2 uv=vec2(vT.x,1.0-vT.y);vec2 c=uv-0.5;vec2 ca=vec2(c.x*min(uAspect,1.5),c.y);float rr=dot(ca,ca);float f=1.0+uStrength*rr*rr;
@@ -593,7 +592,8 @@ if (_gl) (function(){
   function layout(list){
     cols=Math.max(1,Math.round(Math.sqrt(list.length*1.6))); rowsN=Math.ceil(list.length/cols);
     fieldW=cols*cell; fieldH=rowsN*cell; cells=[];
-    for(let s=0;s<cols*rowsN;s++){const it=list[s%list.length];
+    // one cell per project — no wrap-repeat (avoids a highlight project showing twice in the tile)
+    for(let s=0;s<list.length;s++){const it=list[s];
       cells.push({it,s:1,x:(s%cols)*cell+(cell-it.w)/2+(hash(s)*2-1)*40,y:((s/cols)|0)*cell+(cell-it.h)/2+(hash(s+77)*2-1)*40});}
   }
   layout(tex);
