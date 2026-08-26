@@ -555,7 +555,9 @@ if (_gl) (function(){
   const SCENE_FS=`precision highp float;varying vec2 vUv;uniform sampler2D uTex;void main(){gl_FragColor=vec4(texture2D(uTex,vUv).rgb,1.0);}`;
   const LENS_VS=`attribute vec2 aPos;varying vec2 vT;void main(){vT=aPos*0.5+0.5;gl_Position=vec4(aPos,0.0,1.0);}`;
   const LENS_FS=`precision highp float;varying vec2 vT;uniform sampler2D uFBO;uniform float uAspect,uStrength,uVig,uIntro;
-    void main(){vec2 fuv=vec2(vT.x,vT.y);vec4 s=texture2D(uFBO,fuv);float m=uIntro;gl_FragColor=vec4(s.rgb*m,s.a*m);}`;
+    void main(){vec2 uv=vec2(vT.x,1.0-vT.y);vec2 c=uv-0.5;vec2 ca=vec2(c.x*min(uAspect,1.5),c.y);float rr=dot(ca,ca);float f=1.0+uStrength*rr*rr;
+    vec2 d=0.5+c*f;vec4 s=texture2D(uFBO,vec2(d.x,1.0-d.y));if(d.x<0.0||d.x>1.0||d.y<0.0||d.y>1.0)s=vec4(0.0);
+    float vig=smoothstep(0.98,0.32,length(ca));float m=mix(1.0-uVig,1.0,vig)*uIntro;gl_FragColor=vec4(s.rgb*m,s.a*m);}`;
   function sh(t,s){const o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);
     if(!gl.getShaderParameter(o,gl.COMPILE_STATUS))throw new Error(gl.getShaderInfoLog(o));return o;}
   function mkProg(vs,fs,at,un){const p=gl.createProgram();gl.attachShader(p,sh(gl.VERTEX_SHADER,vs));gl.attachShader(p,sh(gl.FRAGMENT_SHADER,fs));
@@ -583,7 +585,7 @@ if (_gl) (function(){
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);return t;}
 
-  const STRENGTH=0.0, ZOOM=(innerWidth<=680?0.34:0.85), VIG=0.08;   // no geometric distortion — soft-focus toward edges instead
+  const STRENGTH=-0.48, ZOOM=(innerWidth<=680?0.34:0.85), VIG=0.11;   // zoom out on phone so more of the field shows
   function hash(i){let h=(i*2654435761)>>>0;return (h%1000)/1000;}
   // one texture per project (skip the About "secret" card — it has no thumb on the field)
   const VIDEO_OK = location.protocol!=="file:" && innerWidth>680;   // served site + not phone (phone stays on stills for speed)
@@ -637,7 +639,6 @@ if (_gl) (function(){
     return {factor:ZS+(1-ZS)*ez, alpha:ez, strength:STRENGTH*ew}; }
 
   const FOLLOW=0.075, FRICTION=0.95;
-  let _mx=0.5,_my=0.5;
   function frame(){
     if(fbo){
       const io=intro(), rz=ZOOM*io.factor;
@@ -663,12 +664,7 @@ if (_gl) (function(){
       gl.enableVertexAttribArray(scene.A.aCorner);gl.vertexAttribPointer(scene.A.aCorner,2,gl.FLOAT,false,0,0);
       gl.uniform2f(scene.U.uRes,W/DPR,H/DPR);gl.uniform1f(scene.U.uZoom,rz);gl.uniform2f(scene.U.uPan,canvasX,canvasY);
       gl.activeTexture(gl.TEXTURE0);gl.uniform1i(scene.U.uTex,0);
-      {const mw=screenToWorld(_mx,_my); const R=560.0;   // proximity lift field around the cursor
-        for(const c of cells){ const it=c.it;
-          const ox=Math.round((mw[0]-c.x-it.w/2)/fieldW)*fieldW, oy=Math.round((mw[1]-c.y-it.h/2)/fieldH)*fieldH;
-          const cxp=c.x+ox+it.w/2, cyp=c.y+oy+it.h/2, d=Math.hypot(mw[0]-cxp,mw[1]-cyp);
-          const prox=Math.max(0,1-d/R), tgt=1+0.26*prox*prox*(drag?0.25:1);
-          c.s+=(tgt-c.s)*0.12; } }
+      for(const c of cells){const tgt=(c===hoverC && !drag)?1.07:1; c.s+=(tgt-c.s)*0.07;}   // eased hover bump (soft)
       const hw=(W/DPR)/2/rz*2.0, hh=(H/DPR)/2/rz*2.0;
       const m0=Math.floor((canvasX-hw)/fieldW),m1=Math.ceil((canvasX+hw)/fieldW),n0=Math.floor((canvasY-hh)/fieldH),n1=Math.ceil((canvasY+hh)/fieldH);
       for(let m=m0;m<=m1;m++)for(let n=n0;n<=n1;n++){const ox=m*fieldW,oy=n*fieldH;
@@ -730,7 +726,6 @@ if (_gl) (function(){
       isAboutLink(p) ? openAbout(false) : openShow(p);}}}
   cv.addEventListener("mousedown",e=>{if(e.target.closest(".overlay"))return;down(e.clientX,e.clientY);});
   addEventListener("mousemove",e=>move(e.clientX,e.clientY));
-  addEventListener("mousemove",e=>{_mx=e.clientX/innerWidth;_my=e.clientY/innerHeight;});
   addEventListener("mouseup",e=>up(e.clientX,e.clientY));
   cv.addEventListener("wheel",e=>{if(e.target.closest(".overlay"))return;e.preventDefault();endIntro();
     const k=e.deltaMode===1?16:1;targetX+=e.deltaX*k/ZOOM;targetY+=e.deltaY*k/ZOOM;velocityX=0;velocityY=0;},{passive:false});
