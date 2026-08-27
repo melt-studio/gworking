@@ -603,22 +603,29 @@ if (_gl) (function(){
     }
     return it;});
   const videoItems=tex.filter(it=>it.vid);
-  const cell=700;                                  // scaled up with the thumbnails -> same gap-to-tile ratio
-  let cols, rowsN, fieldW, fieldH, cells;
+  const GAP=104;                                   // consistent gap between neighbouring tiles (world units)
+  let cols, rowsN, fieldW, fieldH, cells, _gapYs=[];
   function layout(list){
     cols=Math.max(1,Math.round(Math.sqrt(list.length*1.6))); rowsN=Math.ceil(list.length/cols);
-    fieldW=cols*cell; fieldH=rowsN*cell; cells=[];
-    // one cell per project (original scattered grid — no brick stagger)
-    for(let s=0;s<list.length;s++){const it=list[s];
-      cells.push({it,s:1,x:(s%cols)*cell+(cell-it.w)/2+(hash(s)*2-1)*46,y:((s/cols)|0)*cell+(cell-it.h)/2+(hash(s+77)*2-1)*46});}
+    // size each column to its widest tile and each row to its tallest, then add a FIXED gap ->
+    // spacing is driven by real tile sizes, so the gap between neighbours stays consistent (no touching)
+    const colW=new Array(cols).fill(0), rowH=new Array(rowsN).fill(0);
+    for(let s=0;s<list.length;s++){const it=list[s], c=s%cols, r=(s/cols)|0;
+      if(it.w>colW[c])colW[c]=it.w; if(it.h>rowH[r])rowH[r]=it.h;}
+    const colX=new Array(cols), rowY=new Array(rowsN);
+    let x=0; for(let c=0;c<cols;c++){colX[c]=x; x+=colW[c]+GAP;} fieldW=x;
+    let y=0; for(let r=0;r<rowsN;r++){rowY[r]=y; y+=rowH[r]+GAP;} fieldH=y;
+    _gapYs=[]; for(let r=0;r<rowsN;r++) _gapYs.push(rowY[r]+rowH[r]+GAP/2);   // centre of each row-gap band
+    cells=[];
+    const J=GAP*0.16;                              // gentle scatter, kept well inside the gap so tiles never touch
+    for(let s=0;s<list.length;s++){const it=list[s], c=s%cols, r=(s/cols)|0;
+      const cx=colX[c]+(colW[c]-it.w)/2, cy=rowY[r]+(rowH[r]-it.h)/2;
+      cells.push({it,s:1,x:cx+(hash(s)*2-1)*J, y:cy+(hash(s+77)*2-1)*J});}
   }
   layout(tex);
-  // frame the opening view on the middle of the field so the first screen is full (no empty edge/corner)
-  // opening framing: push tiles a touch left, and snap the vertical center onto a row-gap
-  // so the centered nav lands in the white band — robust to the live project count (grid size varies)
-  const HOME_DX=cell*0.30;
-  function homeX(){ return fieldW/2 + HOME_DX; }
-  function homeY(){ return Math.round((fieldH/2)/cell)*cell; }   // nearest row-gap boundary
+  // opening framing: push tiles a touch left, and seat the centered nav in the nearest row-gap band
+  function homeX(){ return fieldW/2 + 0.30*(fieldW/Math.max(1,cols)); }
+  function homeY(){ let best=fieldH/2, bd=1e9; for(const g of _gapYs){const d=Math.abs(g-fieldH/2); if(d<bd){bd=d;best=g;}} return best; }
   targetX=homeX(); canvasX=homeX(); targetY=homeY(); canvasY=homeY();
   // Work dropdown -> filter the canvas to matching projects + replay the warp reveal
   let _curFilter=null;
