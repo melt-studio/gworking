@@ -446,7 +446,7 @@
   /* intro reveal: top-left tagline first, the rest of the nav + copyright at the warp */
   #homeLink{opacity:0 !important; transition:opacity 1.4s var(--soft) !important;}
   body.intro-go #homeLink{opacity:1 !important;}
-  .navgroup > *{opacity:0; transition:opacity 1.1s var(--soft);}
+  .navgroup > *{opacity:0; transition:opacity 2.6s var(--soft) .4s;}   /* slower nav fade-in (About / Work / Archive) */
   body.chrome-in .navgroup > *{opacity:1;}
   /* copyright moved to the right */
   .hud-bl{left:auto !important; right:36px !important;}
@@ -589,7 +589,7 @@ if (_gl) (function(){
   const VIDEO_OK = location.protocol!=="file:" && innerWidth>680;   // served site + not phone (phone stays on stills for speed)
   const FIELD=PROJECTS.map((p,i)=>({p,idx:i})).filter(o=>!isAboutLink(o.p));
   const tex=FIELD.map(o=>{const a=(o.p.thumb&&o.p.thumb.w&&o.p.thumb.h)?o.p.thumb.w/o.p.thumb.h:1;
-    let qw,qh; if(a>=1){qw=420;qh=420/a;}else{qh=420;qw=420*a;}
+    let qw,qh; if(a>=1){qw=500;qh=500/a;}else{qh=500;qw=500*a;}   // bigger thumbnails (scaled with the cell to keep spacing ratio)
     const it={idx:o.idx,p:o.p,w:qw,h:qh,t:mkTex()};
     // baked base64 (local preview) or the live asset URL (poster for video/gif, else the file)
     const src=(typeof THUMBS!=="undefined"&&THUMBS[o.p.slug]) || (o.p.thumb&&(o.p.thumb.poster||o.p.thumb.file));
@@ -602,16 +602,21 @@ if (_gl) (function(){
     }
     return it;});
   const videoItems=tex.filter(it=>it.vid);
-  const cell=600;
+  const cell=700;                                  // scaled up with the thumbnails -> same gap-to-tile ratio
   let cols, rowsN, fieldW, fieldH, cells;
   function layout(list){
     cols=Math.max(1,Math.round(Math.sqrt(list.length*1.6))); rowsN=Math.ceil(list.length/cols);
     fieldW=cols*cell; fieldH=rowsN*cell; cells=[];
-    // one cell per project — no wrap-repeat (avoids a highlight project showing twice in the tile)
+    // one cell per project (original scattered grid — no brick stagger)
     for(let s=0;s<list.length;s++){const it=list[s];
-      cells.push({it,s:1,x:(s%cols)*cell+(cell-it.w)/2+(hash(s)*2-1)*40,y:((s/cols)|0)*cell+(cell-it.h)/2+(hash(s+77)*2-1)*40});}
+      cells.push({it,s:1,x:(s%cols)*cell+(cell-it.w)/2+(hash(s)*2-1)*46,y:((s/cols)|0)*cell+(cell-it.h)/2+(hash(s+77)*2-1)*46});}
   }
   layout(tex);
+  // frame the opening view on the middle of the field so the first screen is full (no empty edge/corner)
+  // opening framing: field center, nudged left + down so the nav band stays clear on first load
+  const HOME_DX=cell*0.30, HOME_DY=-324;   // +DX pushes tiles left, -DY lowers them (~275px down at ZOOM 0.85)
+  const HOME_X=fieldW/2+HOME_DX, HOME_Y=fieldH/2+HOME_DY;
+  targetX=HOME_X; canvasX=HOME_X; targetY=HOME_Y; canvasY=HOME_Y;
   // Work dropdown -> filter the canvas to matching projects + replay the warp reveal
   let _curFilter=null;
   function applyWorkFilter(k){
@@ -620,7 +625,7 @@ if (_gl) (function(){
     let list = k ? tex.filter(function(it){ return (((it.p.overview||"")+" "+(it.p.name||"")).toLowerCase()).indexOf(k)>=0; }) : tex;
     if(!list.length) list=tex;               // no matches -> show everything
     layout(list);
-    targetX=0; targetY=0; canvasX=0; canvasY=0; velocityX=0; velocityY=0;
+    targetX=fieldW/2+HOME_DX; targetY=fieldH/2+HOME_DY; canvasX=fieldW/2+HOME_DX; canvasY=fieldH/2+HOME_DY; velocityX=0; velocityY=0;
     T0=performance.now()-SOLO; _introForced=false;   // replay zoom+warp (skip the solo beat)
     return _curFilter;
   }
@@ -663,12 +668,7 @@ if (_gl) (function(){
       gl.enableVertexAttribArray(scene.A.aCorner);gl.vertexAttribPointer(scene.A.aCorner,2,gl.FLOAT,false,0,0);
       gl.uniform2f(scene.U.uRes,W/DPR,H/DPR);gl.uniform1f(scene.U.uZoom,rz);gl.uniform2f(scene.U.uPan,canvasX,canvasY);
       gl.activeTexture(gl.TEXTURE0);gl.uniform1i(scene.U.uTex,0);
-      {const mw=screenToWorld(_mx,_my); const R=560.0;   // proximity lift field around the cursor
-        for(const c of cells){ const it=c.it;
-          const ox=Math.round((mw[0]-c.x-it.w/2)/fieldW)*fieldW, oy=Math.round((mw[1]-c.y-it.h/2)/fieldH)*fieldH;
-          const cxp=c.x+ox+it.w/2, cyp=c.y+oy+it.h/2, d=Math.hypot(mw[0]-cxp,mw[1]-cyp);
-          const prox=Math.max(0,1-d/R), tgt=1+0.26*prox*prox*(drag?0.25:1);
-          c.s+=(tgt-c.s)*0.12; } }
+      for(const c of cells){const tgt=(c===hoverC && !drag)?1.10:1; c.s+=(tgt-c.s)*0.10;}   // single-tile scale bump, eased
       const hw=(W/DPR)/2/rz*2.0, hh=(H/DPR)/2/rz*2.0;
       const m0=Math.floor((canvasX-hw)/fieldW),m1=Math.ceil((canvasX+hw)/fieldW),n0=Math.floor((canvasY-hh)/fieldH),n1=Math.ceil((canvasY+hh)/fieldH);
       for(let m=m0;m<=m1;m++)for(let n=n0;n<=n1;n++){const ox=m*fieldW,oy=n*fieldH;
