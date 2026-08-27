@@ -589,8 +589,8 @@ if (_gl) (function(){
   const VIDEO_OK = location.protocol!=="file:" && innerWidth>680;   // served site + not phone (phone stays on stills for speed)
   const FIELD=PROJECTS.map((p,i)=>({p,idx:i})).filter(o=>!isAboutLink(o.p));
   const tex=FIELD.map(o=>{const a=(o.p.thumb&&o.p.thumb.w&&o.p.thumb.h)?o.p.thumb.w/o.p.thumb.h:1;
-    // square/vertical: long edge = 500. landscape gets a size boost (ramps with width) so wide thumbs read with similar impact
-    let qw,qh; if(a>=1){const f=1+0.26*Math.min(1,(a-1)/0.8); qw=500*f; qh=500*f/a;} else {qh=500; qw=500*a;}
+    // uniform tile height -> uniform gaps in the flow layout; width follows aspect so landscape reads wide/big
+    let qh=500, qw=500*Math.min(a,2.4);   // clamp ultra-wide panoramas
     const it={idx:o.idx,p:o.p,w:qw,h:qh,t:mkTex()};
     // baked base64 (local preview) or the live asset URL (poster for video/gif, else the file)
     const src=(typeof THUMBS!=="undefined"&&THUMBS[o.p.slug]) || (o.p.thumb&&(o.p.thumb.poster||o.p.thumb.file));
@@ -603,28 +603,28 @@ if (_gl) (function(){
     }
     return it;});
   const videoItems=tex.filter(it=>it.vid);
-  const GAP=104;                                   // consistent gap between neighbouring tiles (world units)
+  const TH=500;                                    // uniform tile height
+  const GAP=290;                                   // fixed gap between tiles (~247px on screen) -> uniform min=max spacing
   let cols, rowsN, fieldW, fieldH, cells, _gapYs=[];
   function layout(list){
     cols=Math.max(1,Math.round(Math.sqrt(list.length*1.6))); rowsN=Math.ceil(list.length/cols);
-    // size each column to its widest tile and each row to its tallest, then add a FIXED gap ->
-    // spacing is driven by real tile sizes, so the gap between neighbours stays consistent (no touching)
-    const colW=new Array(cols).fill(0), rowH=new Array(rowsN).fill(0);
-    for(let s=0;s<list.length;s++){const it=list[s], c=s%cols, r=(s/cols)|0;
-      if(it.w>colW[c])colW[c]=it.w; if(it.h>rowH[r])rowH[r]=it.h;}
-    const colX=new Array(cols), rowY=new Array(rowsN);
-    let x=0; for(let c=0;c<cols;c++){colX[c]=x; x+=colW[c]+GAP;} fieldW=x;
-    let y=0; for(let r=0;r<rowsN;r++){rowY[r]=y; y+=rowH[r]+GAP;} fieldH=y;
-    _gapYs=[]; for(let r=0;r<rowsN;r++) _gapYs.push(rowY[r]+rowH[r]+GAP/2);   // centre of each row-gap band
-    cells=[];
-    const J=GAP*0.16;                              // gentle scatter, kept well inside the gap so tiles never touch
-    for(let s=0;s<list.length;s++){const it=list[s], c=s%cols, r=(s/cols)|0;
-      const cx=colX[c]+(colW[c]-it.w)/2, cy=rowY[r]+(rowH[r]-it.h)/2;
-      cells.push({it,s:1,x:cx+(hash(s)*2-1)*J, y:cy+(hash(s+77)*2-1)*J});}
+    fieldH=rowsN*(TH+GAP);
+    // group into rows, measure each row's content width
+    const rows=[];
+    for(let r=0;r<rowsN;r++){const items=[]; let w=0;
+      for(let ci=0;ci<cols;ci++){const s=r*cols+ci; if(s>=list.length)break; items.push(list[s]); w+=list[s].w;}
+      w+=Math.max(0,items.length-1)*GAP; rows.push({items,w});}
+    fieldW=0; for(const row of rows) if(row.w>fieldW)fieldW=row.w; fieldW+=GAP;   // widest row + seam gap
+    cells=[]; _gapYs=[];
+    for(let r=0;r<rowsN;r++){const row=rows[r], y=r*(TH+GAP);
+      _gapYs.push(y+TH+GAP/2);                      // centre of the row-gap band
+      let x=(fieldW-row.w)/2;                       // centre each row in the field (empty space falls at the off-screen seams)
+      for(const it of row.items){ cells.push({it,s:1,x:x, y:y+(TH-it.h)/2}); x+=it.w+GAP; }
+    }
   }
   layout(tex);
-  // opening framing: push tiles a touch left, and seat the centered nav in the nearest row-gap band
-  function homeX(){ return fieldW/2 + 0.30*(fieldW/Math.max(1,cols)); }
+  // opening framing: nudge a touch left, seat the centered nav in the nearest row-gap band
+  function homeX(){ return fieldW/2 + 0.25*(TH+GAP); }
   function homeY(){ let best=fieldH/2, bd=1e9; for(const g of _gapYs){const d=Math.abs(g-fieldH/2); if(d<bd){bd=d;best=g;}} return best; }
   targetX=homeX(); canvasX=homeX(); targetY=homeY(); canvasY=homeY();
   // Work dropdown -> filter the canvas to matching projects + replay the warp reveal
