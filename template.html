@@ -589,7 +589,8 @@ if (_gl) (function(){
   const VIDEO_OK = location.protocol!=="file:" && innerWidth>680;   // served site + not phone (phone stays on stills for speed)
   const FIELD=PROJECTS.map((p,i)=>({p,idx:i})).filter(o=>!isAboutLink(o.p));
   const tex=FIELD.map(o=>{const a=(o.p.thumb&&o.p.thumb.w&&o.p.thumb.h)?o.p.thumb.w/o.p.thumb.h:1;
-    let qw,qh; if(a>=1){qw=500;qh=500/a;}else{qh=500;qw=500*a;}   // bigger thumbnails (scaled with the cell to keep spacing ratio)
+    // square/vertical: long edge = 500. landscape gets a size boost (ramps with width) so wide thumbs read with similar impact
+    let qw,qh; if(a>=1){const f=1+0.26*Math.min(1,(a-1)/0.8); qw=500*f; qh=500*f/a;} else {qh=500; qw=500*a;}
     const it={idx:o.idx,p:o.p,w:qw,h:qh,t:mkTex()};
     // baked base64 (local preview) or the live asset URL (poster for video/gif, else the file)
     const src=(typeof THUMBS!=="undefined"&&THUMBS[o.p.slug]) || (o.p.thumb&&(o.p.thumb.poster||o.p.thumb.file));
