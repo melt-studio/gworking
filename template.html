@@ -613,10 +613,12 @@ if (_gl) (function(){
   }
   layout(tex);
   // frame the opening view on the middle of the field so the first screen is full (no empty edge/corner)
-  // opening framing: field center, nudged left + down so the nav band stays clear on first load
-  const HOME_DX=cell*0.30, HOME_DY=-324;   // +DX pushes tiles left, -DY lowers them (~275px down at ZOOM 0.85)
-  const HOME_X=fieldW/2+HOME_DX, HOME_Y=fieldH/2+HOME_DY;
-  targetX=HOME_X; canvasX=HOME_X; targetY=HOME_Y; canvasY=HOME_Y;
+  // opening framing: push tiles a touch left, and snap the vertical center onto a row-gap
+  // so the centered nav lands in the white band — robust to the live project count (grid size varies)
+  const HOME_DX=cell*0.30;
+  function homeX(){ return fieldW/2 + HOME_DX; }
+  function homeY(){ return Math.round((fieldH/2)/cell)*cell; }   // nearest row-gap boundary
+  targetX=homeX(); canvasX=homeX(); targetY=homeY(); canvasY=homeY();
   // Work dropdown -> filter the canvas to matching projects + replay the warp reveal
   let _curFilter=null;
   function applyWorkFilter(k){
@@ -625,7 +627,7 @@ if (_gl) (function(){
     let list = k ? tex.filter(function(it){ return (((it.p.overview||"")+" "+(it.p.name||"")).toLowerCase()).indexOf(k)>=0; }) : tex;
     if(!list.length) list=tex;               // no matches -> show everything
     layout(list);
-    targetX=fieldW/2+HOME_DX; targetY=fieldH/2+HOME_DY; canvasX=fieldW/2+HOME_DX; canvasY=fieldH/2+HOME_DY; velocityX=0; velocityY=0;
+    targetX=homeX(); canvasX=homeX(); targetY=homeY(); canvasY=homeY(); velocityX=0; velocityY=0;
     T0=performance.now()-SOLO; _introForced=false;   // replay zoom+warp (skip the solo beat)
     return _curFilter;
   }
@@ -668,7 +670,7 @@ if (_gl) (function(){
       gl.enableVertexAttribArray(scene.A.aCorner);gl.vertexAttribPointer(scene.A.aCorner,2,gl.FLOAT,false,0,0);
       gl.uniform2f(scene.U.uRes,W/DPR,H/DPR);gl.uniform1f(scene.U.uZoom,rz);gl.uniform2f(scene.U.uPan,canvasX,canvasY);
       gl.activeTexture(gl.TEXTURE0);gl.uniform1i(scene.U.uTex,0);
-      for(const c of cells){const tgt=(c===hoverC && !drag)?1.10:1; c.s+=(tgt-c.s)*0.10;}   // single-tile scale bump, eased
+      for(const c of cells){const tgt=(c===hoverC && !drag)?1.10:1; c.s+=(tgt-c.s)*0.055;}   // single-tile scale bump, slower ease
       const hw=(W/DPR)/2/rz*2.0, hh=(H/DPR)/2/rz*2.0;
       const m0=Math.floor((canvasX-hw)/fieldW),m1=Math.ceil((canvasX+hw)/fieldW),n0=Math.floor((canvasY-hh)/fieldH),n1=Math.ceil((canvasY+hh)/fieldH);
       for(let m=m0;m<=m1;m++)for(let n=n0;n<=n1;n++){const ox=m*fieldW,oy=n*fieldH;
