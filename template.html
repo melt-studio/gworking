@@ -508,9 +508,9 @@
   .a-contact .roll > span:nth-child(2){display:none !important;}
   /* underline draws in on hover, retracts on leave */
   .a-contact .ul-anytime{position:relative; display:inline-block; text-decoration:none !important;}
-  .a-contact .ul-anytime::after{content:""; position:absolute; left:0; right:0; bottom:-0.22em; height:1px; background:currentColor; transform:scaleX(0); transform-origin:left center;}   /* no transition on the base -> closing snaps back to 0 instantly (fixes stuck-halfway on reopen) */
-  .overlay.active .a-contact .ul-anytime::after{transform:scaleX(1); transition:transform 1.7s cubic-bezier(0.25,0.6,0.2,1) 1.35s;}   /* draw only on open, a touch slower */
-  .a-contact a:hover .ul-anytime::after{animation:ulRedraw 1.05s cubic-bezier(0.25,0.6,0.2,1);}         /* redraws on hover */
+  .a-contact .ul-anytime::after{content:""; position:absolute; left:0; right:0; bottom:-0.22em; height:1px; background:currentColor; transform:scaleX(0); transform-origin:left center; transition:transform 0s 1s;}   /* on close: stay drawn while the overlay fades out, then reset to 0 (instant, delayed past the fade) — no retract, no stuck-halfway */
+  .overlay.active .a-contact .ul-anytime::after{transform:scaleX(1); transition:transform 1.7s cubic-bezier(0.25,0.6,0.2,1) 1.35s;}   /* draw only on open */
+  .a-contact a:hover .ul-anytime::after{animation:ulRedraw 1.6s cubic-bezier(0.25,0.6,0.2,1);}          /* redraws on hover, slower */
   @keyframes ulRedraw{0%{transform:scaleX(1); transform-origin:right center;} 45%{transform:scaleX(0); transform-origin:right center;} 46%{transform:scaleX(0); transform-origin:left center;} 100%{transform:scaleX(1); transform-origin:left center;}}
   /* project panel: give the title + label room for descenders (g/j/y were clipping) */
   .show-bar-head .nm{padding-bottom:0.16em !important;}
