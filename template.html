@@ -323,10 +323,31 @@
     height:71px; transition:height .6s var(--slide-ease);}
   .show-bar.open{height:46vh;}
   .show-bar-head{position:absolute; top:0; left:0; right:0; height:71px; display:flex; align-items:flex-start;
-    justify-content:space-between; padding:15px 36px 0; cursor:pointer; transition:padding-top .5s var(--slide-ease);}
-  .show-bar.open .show-bar-head{padding-top:30px;}
-  .show-bar-head .num{color:var(--fg); font-size:11.5px !important; text-transform:uppercase !important; letter-spacing:0.02em !important;}
-  .pi-label{display:inline-flex; align-items:center; gap:5px; font-size:11.5px !important; text-transform:uppercase !important; letter-spacing:0.02em !important;}
+    justify-content:space-between; padding:0 36px 0; cursor:pointer; transition:padding-top .5s var(--slide-ease);}   /* Project info raised 15px */
+  .show-bar.open .show-bar-head{padding-top:56px;}                 /* space above the title when open */
+  .show-bar.open .pi-panel{top:96px !important; padding-top:2px !important;}   /* client/content sits close under the title */
+  /* label + counter (shown when closed). the transition on the base rule is the CLOSE direction:
+     fade back in after a short delay, so the title/scope clear out first — no overlap on close */
+  .pi-label{display:inline-flex; align-items:center; gap:0.22em; font-size:clamp(14px, 2.6vw, 28px) !important; text-transform:none !important; letter-spacing:-0.012em !important; line-height:1 !important; transition:opacity .8s var(--soft) .7s;}   /* close: fade back in after the title clears */
+  .show-bar-head .num{display:none !important;}   /* image counter removed */
+  /* title (hidden when closed). base transition = CLOSE direction: fade out slowly, first */
+  .show-bar-head .nm{position:absolute; left:36px; right:220px; top:56px; opacity:0; color:var(--fg) !important;
+    font-size:clamp(14px, 2.6vw, 28px) !important; text-transform:none !important; letter-spacing:-0.012em !important; line-height:1.1 !important;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; transition:opacity .85s var(--soft) 0s;}
+  /* OPEN direction: label fades out slowly first, then the title fades in once it has cleared */
+  .show-bar.open .pi-label{opacity:0; transition:opacity .8s var(--soft) 0s;}
+  .show-bar.open .show-bar-head .nm{opacity:1; transition:opacity .9s var(--soft) .5s;}
+  /* scope tags: stacked, right-aligned, where the counter was; cascade in like the panel content */
+  .show-bar-head .sc{position:absolute; right:36px; top:56px; display:flex; flex-direction:column; align-items:flex-end; gap:0; text-align:right; pointer-events:none;}
+  .show-bar-head .sc .sc-tag{display:block !important; margin:0 !important; color:var(--fg) !important; font-size:11.5px !important; text-transform:uppercase !important; letter-spacing:0.02em !important; line-height:1.28 !important;
+    opacity:0; transform:translateY(12px); transition:opacity .8s var(--soft) 0s, transform .8s var(--soft) 0s;}   /* close: fade out slowly */
+  /* open: cascade in top -> bottom. !important on the delays — .sc-tag is in the same global transition rule that forces delay:0 */
+  .show-bar.open .sc .sc-tag{opacity:1; transform:none; transition:opacity .85s var(--soft), transform .85s var(--soft) !important;}
+  .show-bar.open .sc .sc-tag:nth-child(1){transition-delay:.6s !important;}
+  .show-bar.open .sc .sc-tag:nth-child(2){transition-delay:.8s !important;}
+  .show-bar.open .sc .sc-tag:nth-child(3){transition-delay:1.0s !important;}
+  .show-bar.open .sc .sc-tag:nth-child(4){transition-delay:1.2s !important;}
+  .show-bar.open .sc .sc-tag:nth-child(5){transition-delay:1.4s !important;}
   /* align header + copyright to the same 36px as the X */
   .hud-tl{left:36px !important;} .hud-bl{left:36px !important;}
   /* menu moved to top-left, beside the header */
@@ -386,19 +407,20 @@
   body.about-open .topleft, body.show-open .topleft, body.menu-open .topleft,
   body.about-open .workmenu, body.show-open .workmenu, body.menu-open .workmenu{
     opacity:0 !important; pointer-events:none !important; transition:opacity .25s var(--soft);}
-  .pi-ico{position:relative; display:inline-block; width:9px; height:9px;}
+  .pi-ico{position:relative; top:0.06em; display:inline-block; width:0.64em; height:0.64em;}   /* scales with the label; nudged down to sit centered to the text */
+  .closex{width:24px !important; height:24px !important; margin-top:-12px !important;}   /* close X enlarged 20% */
   .pi-ico:before,.pi-ico:after{content:""; position:absolute; background:var(--fg);}
-  .pi-ico:before{left:0; top:4px; width:9px; height:1px;}
-  .pi-ico:after{top:0; left:4px; width:1px; height:9px; transition:opacity .3s var(--soft);}
+  .pi-ico:before{left:0; top:calc(50% - 1px); width:0.64em; height:2px;}
+  .pi-ico:after{top:0; left:calc(50% - 1px); width:2px; height:0.64em; transition:opacity .3s var(--soft);}
   .show-bar.open .pi-ico:after{opacity:0;}
   .pi-panel{position:absolute; left:0; right:0; top:71px; bottom:0; padding:34px 36px 52px; overflow-y:auto; opacity:1; transform:none;}
   .pi-panel .meta{display:flex; flex-direction:column; gap:15px; max-width:760px;}
   /* sections cascade in (fade + rise), then fade out together as the panel closes */
-  .pi-panel .meta > *{opacity:0; transform:translateY(12px); transition:opacity .8s var(--soft), transform .8s var(--soft);}
+  .pi-panel .meta > *{opacity:0; transform:translateY(12px); transition:opacity 1.0s var(--soft), transform 1.0s var(--soft);}
   .show-bar.open .pi-panel .meta > *{opacity:1; transform:none;}
-  .show-bar.open .pi-panel .meta > *:nth-child(1){transition-delay:.24s;}
-  .show-bar.open .pi-panel .meta > *:nth-child(2){transition-delay:.33s;}
-  .show-bar.open .pi-panel .meta > *:nth-child(3){transition-delay:.42s;}
+  .show-bar.open .pi-panel .meta > *:nth-child(1){transition-delay:.9s;}
+  .show-bar.open .pi-panel .meta > *:nth-child(2){transition-delay:1.05s;}
+  .show-bar.open .pi-panel .meta > *:nth-child(3){transition-delay:1.2s;}
   .show-bar.open .pi-panel .meta > *:nth-child(4){transition-delay:.51s;}
   .pi-panel, .pi-panel *{text-transform:none !important;}
   .pi-panel .nm,.pi-panel .cl,.pi-panel .desc,.pi-panel .sc{color:var(--fg) !important; opacity:1 !important;}
@@ -427,7 +449,7 @@
   .nav,.worktoggle,.hud,.clink,.a-contact a,.mtag,.m-client,.m-note,.m-num,.sc-tag,
   .pi-panel .nm,.pi-panel .desc,.pi-panel .cl,.pi-panel .sc,.show-bar-head .num,.pi-label{
     transition:opacity .8s var(--soft), color .8s var(--soft) !important;}
-  .show-bar{transition:height 1.15s var(--slide-ease), bottom 1.15s var(--slide-ease) !important;}
+  .show-bar{transition:height 1.45s var(--slide-ease), bottom 1.45s var(--slide-ease) !important;}
   .show-bar-head{transition:padding-top .8s var(--slide-ease) !important;}
   .pi-panel{transition:opacity .9s var(--easein) .22s, transform .9s var(--slide-ease) .22s !important;}
   .workmenu{transition:opacity .7s var(--easein), transform .75s var(--soft) !important;}
@@ -437,8 +459,10 @@
   .themetoggle::before{transition:left .55s var(--soft), background .9s ease !important;}
   .pi-ico:after{transition:opacity .45s var(--soft) !important;}
   /* smaller all-caps type: no antialiasing (intro line keeps it) */
-  .hud-bl,.pi-label,.show-bar-head .num,.pi-panel .cl,.pi-panel .cl *,.pi-panel .sc,.pi-panel .sc *,.workmenu .wrow{
+  .hud-bl,.pi-panel .cl,.pi-panel .cl *,.pi-panel .sc,.pi-panel .sc *,.workmenu .wrow{
     -webkit-font-smoothing:auto !important; -moz-osx-font-smoothing:auto !important;}
+  /* Project info label + counter: antialiased so the larger type renders a touch slimmer */
+  .pi-label, .pi-label *, .show-bar-head .num, .show-bar-head .nm{-webkit-font-smoothing:antialiased !important; -moz-osx-font-smoothing:grayscale !important;}
   /* ===== layout: nav-as-tagline, centered vertically; no central copy ===== */
   .introline{display:none !important;}
   .topleft{top:50% !important; transform:translateY(-50%) !important; opacity:1 !important;}
@@ -446,8 +470,13 @@
   /* intro reveal: top-left tagline first, the rest of the nav + copyright at the warp */
   #homeLink{opacity:0 !important; transition:opacity 1.4s var(--soft) !important;}
   body.intro-go #homeLink{opacity:1 !important;}
-  .navgroup > *{opacity:0; transition:opacity 2.6s var(--soft) .4s;}   /* slower nav fade-in (About / Work / Archive) */
-  body.chrome-in .navgroup > *{opacity:1;}
+  /* nav cascades in one at a time, rising — Work only begins as About is almost fully in.
+     !important is required: a global ".nav,.worktoggle{transition:... !important}" rule otherwise forces delay:0 */
+  .navgroup > *{opacity:0 !important; transform:translateY(12px) !important; transition:opacity .9s var(--soft), transform .9s var(--soft) !important;}
+  body.chrome-in .navgroup > *{opacity:1 !important; transform:none !important;}
+  body.chrome-in .navgroup > *:nth-child(1){transition-delay:0s !important;}      /* About */
+  body.chrome-in .navgroup > *:nth-child(2){transition-delay:.35s !important;}    /* Work */
+  body.chrome-in .navgroup > *:nth-child(3){transition-delay:.7s !important;}     /* Archive */
   /* copyright moved to the right */
   .hud-bl{left:auto !important; right:36px !important;}
   /* phone: nav fills the top of the screen; project slides stack vertically */
@@ -490,13 +519,13 @@
   <div class="show-bar" id="showBar">
       <div class="show-bar-head" id="piToggle">
         <span class="pi-label"><span class="roll"><span>Project info</span><span aria-hidden="true">Project info</span></span><span class="pi-ico"></span></span>
+        <span class="nm" id="capName"></span>
         <span class="num" id="capNum"></span>
+        <span class="sc" id="capScope"></span>
       </div>
       <div class="pi-panel"><div class="meta">
-        <span class="nm" id="capName"></span>
         <span class="cl" id="capClient"></span>
         <span class="desc" id="capDesc"></span>
-        <span class="sc" id="capScope"></span>
       </div></div>
     </div>
 </div>
@@ -519,7 +548,7 @@
   const PROJECTS = __PAYLOAD__;
   const ORDERED = PROJECTS.slice();
   const THUMBS = {};
-  const CUR_L = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2732%27%20height%3D%2723%27%20viewBox%3D%270%200%20180.29%20129.05%27%3E%3Cg%20transform%3D%27translate%28180.29%2C0%29%20scale%28-1%2C1%29%27%3E%3Cpath%20d%3D%27M178.6%2C60.72l-.73-.69L114.53%2C0l-5.21%2C6.17%2C56.95%2C54.02-166.28.02v8.5l166.02.03-56.75%2C54.09%2C5.25%2C6.23%2C63.29-60.1c2.2-1.94%2C2.49-3.35%2C2.48-4.48%2C0-1.42-.51-2.57-1.67-3.75h-.02Z%27%20fill%3D%27%230E0D0D%27/%3E%3C/g%3E%3C/svg%3E") 16 11, pointer`, CUR_R = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2732%27%20height%3D%2723%27%20viewBox%3D%270%200%20180.29%20129.05%27%3E%3Cpath%20d%3D%27M178.6%2C60.72l-.73-.69L114.53%2C0l-5.21%2C6.17%2C56.95%2C54.02-166.28.02v8.5l166.02.03-56.75%2C54.09%2C5.25%2C6.23%2C63.29-60.1c2.2-1.94%2C2.49-3.35%2C2.48-4.48%2C0-1.42-.51-2.57-1.67-3.75h-.02Z%27%20fill%3D%27%230E0D0D%27/%3E%3C/svg%3E") 16 11, pointer`;
+  const CUR_L = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2735%27%20height%3D%2725%27%20viewBox%3D%270%200%20180.29%20129.05%27%3E%3Cg%20transform%3D%27translate%28180.29%2C0%29%20scale%28-1%2C1%29%27%3E%3Cpath%20d%3D%27M178.6%2C60.72l-.73-.69L114.53%2C0l-5.21%2C6.17%2C56.95%2C54.02-166.28.02v8.5l166.02.03-56.75%2C54.09%2C5.25%2C6.23%2C63.29-60.1c2.2-1.94%2C2.49-3.35%2C2.48-4.48%2C0-1.42-.51-2.57-1.67-3.75h-.02Z%27%20fill%3D%27%230E0D0D%27/%3E%3C/g%3E%3C/svg%3E") 16 11, pointer`, CUR_R = `url("data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A//www.w3.org/2000/svg%27%20width%3D%2735%27%20height%3D%2725%27%20viewBox%3D%270%200%20180.29%20129.05%27%3E%3Cpath%20d%3D%27M178.6%2C60.72l-.73-.69L114.53%2C0l-5.21%2C6.17%2C56.95%2C54.02-166.28.02v8.5l166.02.03-56.75%2C54.09%2C5.25%2C6.23%2C63.29-60.1c2.2-1.94%2C2.49-3.35%2C2.48-4.48%2C0-1.42-.51-2.57-1.67-3.75h-.02Z%27%20fill%3D%27%230E0D0D%27/%3E%3C/svg%3E") 16 11, pointer`;
   const PLAY = '<svg viewBox="0 0 24 24"><polygon points="7 5 19 12 7 19"/></svg>';
   const PAUSE = '<svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>';
   const SND_OFF = '<svg viewBox="0 0 24 24"><polygon points="3 9 3 15 7 15 12 19 12 5 7 9"/><line x1="16" y1="9" x2="22" y2="15" stroke="#fff" stroke-width="2"/><line x1="22" y1="9" x2="16" y2="15" stroke="#fff" stroke-width="2"/></svg>';
@@ -808,7 +837,7 @@ if (_gl) (function(){
     if (!showCount) return;
     const kids = [...strip.children]; let cur = 0; const sl = strip.scrollLeft;
     for (let i = 0; i < kids.length; i++) { if (kids[i].offsetLeft - strip.offsetLeft <= sl + 4) cur = i; }
-    capNum.textContent = String(cur + 1).padStart(2, "0") + " / " + String(showCount).padStart(2, "0");
+    capNum.textContent = String(cur + 1).padStart(2, "0") + "/" + String(showCount).padStart(2, "0");
   }
   function openShow(p) {
     let list = [...(p.slides || []), ...(p.gallery || [])];
@@ -845,7 +874,7 @@ if (_gl) (function(){
     var _sh=document.getElementById("show"); if(_sh) _sh.scrollTop=0;
     strip.scrollLeft = 0; strip.scrollTop = 0;
     const _cap = show.querySelector(".show-caption"); if (_cap) { _cap.classList.remove("tuck"); _cap.style.marginTop = ""; }
-    capNum.textContent = single ? "" : ("01 / " + String(showCount).padStart(2, "0"));
+    capNum.textContent = single ? "" : ("01/" + String(showCount).padStart(2, "0"));
     strip.classList.toggle("single", single);
     strip.style.cursor = single ? "default" : "";
     show.classList.remove("closing"); show.classList.add("active");
