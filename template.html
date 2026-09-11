@@ -909,7 +909,7 @@ if (_gl) (function(){
     }).join("");
     strip.querySelectorAll("img").forEach(im => { if (im.complete && im.naturalWidth) im.classList.add("ld"); });
     firstReveal = true;
-    requestAnimationFrame(() => requestAnimationFrame(revealSlides));   // once the overlay has laid out
+    requestAnimationFrame(() => requestAnimationFrame(revealSlides)); setTimeout(revealSlides,340); setTimeout(revealSlides,760);   // once the overlay has laid out
     strip.querySelectorAll(".slide video").forEach(v => {              // reveal the sound button only when the clip actually has audio
       const aBtn = v.parentElement.querySelector(".atoggle"); if (!aBtn) return;
       const check = () => { if (hasAudio(v)) aBtn.hidden = false; };
