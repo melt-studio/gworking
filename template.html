@@ -904,7 +904,7 @@ if (_gl) (function(){
       const dim = (m.w && m.h) ? ` width="${m.w}" height="${m.h}"` : "";
       const inner = isVideo(m)
         ? `<video src="${m.file}"${dim}${ph ? ' preload="none"' : " autoplay"} loop muted playsinline${m.poster ? ` poster="${m.poster}"` : ""}></video><button class="vtoggle" aria-label="Play/pause">${ph ? PLAY : PAUSE}</button><button class="atoggle" aria-label="Sound" hidden>${SND_OFF}</button>`
-        : `<img src="${m.file}"${dim} alt="" loading="lazy" onload="this.classList.add('ld')">`;
+        : `<img src="${m.file}"${dim} alt="" loading="eager" onload="this.classList.add('ld')">`;
       return `<div class="slide" style="--aspect:${a};">${inner}</div>`;
     }).join("");
     strip.querySelectorAll("img").forEach(im => { if (im.complete && im.naturalWidth) im.classList.add("ld"); });
