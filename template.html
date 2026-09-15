@@ -422,6 +422,12 @@
   body:has(.show-bar.open) #piCursor span{transform:translateY(-50%) rotate(45deg) scaleX(1);}
   body:has(.show-bar.open) #piCursor span:nth-child(2){transform:translateY(-50%) rotate(-45deg) scaleX(1);}
   body:has(.show-bar.open), body:has(.show-bar.open) *{cursor:none !important;}
+  /* video controls: hidden until the pointer moves over the strip, fade out after 2s idle (desktop only; phone keeps its tap-to-play) */
+  @media (min-width:769px){
+    #strip .vtoggle, #strip .atoggle{opacity:0; pointer-events:none; transition:opacity .45s var(--soft);}
+    #strip.ctrl-live .vtoggle, #strip.ctrl-live .atoggle{opacity:1; pointer-events:auto;}
+    #strip .atoggle[hidden]{display:none;}
+  }
   .pi-ico:before,.pi-ico:after{content:""; position:absolute; background:var(--fg);}
   .pi-ico:before{left:0; top:calc(50% - 1px); width:0.64em; height:2px;}
   .pi-ico:after{top:0; left:calc(50% - 1px); width:2px; height:0.64em; transition:opacity .3s var(--soft);}
@@ -1089,6 +1095,17 @@ if (_gl) (function(){
     var pc=document.createElement("div"); pc.id="piCursor"; pc.innerHTML="<span></span><span></span>";
     document.body.appendChild(pc);
     addEventListener("mousemove",function(e){ pc.style.transform="translate("+e.clientX+"px,"+e.clientY+"px)"; },{passive:true});
+  })();
+  // video controls: fade in when the pointer moves over the strip, fade out after 2s of no activity
+  (function(){
+    var strip=document.getElementById("strip"); if(!strip) return;
+    var t=null;
+    function hide(){ strip.classList.remove("ctrl-live"); }
+    function ping(){ strip.classList.add("ctrl-live"); clearTimeout(t); t=setTimeout(hide,2000); }
+    strip.addEventListener("mousemove", ping, {passive:true});
+    strip.addEventListener("mouseleave", function(){ clearTimeout(t); hide(); });
+    strip.addEventListener("mouseover", function(e){ if(e.target.closest(".vtoggle,.atoggle")){ strip.classList.add("ctrl-live"); clearTimeout(t); } });
+    strip.addEventListener("mouseout",  function(e){ if(e.target.closest(".vtoggle,.atoggle")) ping(); });
   })();
   document.addEventListener("click",function(e){
     var bar=document.getElementById("showBar");
